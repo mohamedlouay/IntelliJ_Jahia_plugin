@@ -12,6 +12,7 @@ import com.intellij.openapi.fileChooser.FileChooserDescriptor;
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.project.ProjectUtil;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.pom.Navigatable;
 import com.intellij.psi.PsiFile;
@@ -67,7 +68,7 @@ public class CreateNodeTypeQuickFix extends BaseIntentionAction {
                     createNodeType(project, virtualFiles.iterator().next());
                 } else {
                     final FileChooserDescriptor descriptor = FileChooserDescriptorFactory.createSingleFileDescriptor(CndFileType.INSTANCE);
-                    descriptor.setRoots(project.getBaseDir());
+                    descriptor.setRoots(ProjectUtil.guessProjectDir(project));
                     final VirtualFile file = FileChooser.chooseFile(descriptor, project, null);
                     if (file != null) {
                         createNodeType(project, file);
@@ -78,9 +79,7 @@ public class CreateNodeTypeQuickFix extends BaseIntentionAction {
     }
 
     private void createNodeType(final Project project, final VirtualFile file) {
-        new WriteCommandAction.Simple(project) {
-            @Override
-            public void run() {
+        WriteCommandAction.runWriteCommandAction(project, () -> {
                 CndFile cndFile = (CndFile) PsiManager.getInstance(project).findFile(file);
                 ASTNode lastChildNode = cndFile.getNode().getLastChildNode();
                 ASTNode beforeLastChildNode = lastChildNode.getTreePrev();
@@ -106,7 +105,6 @@ public class CreateNodeTypeQuickFix extends BaseIntentionAction {
                 //                final Document document = editor.getDocument();
                 //                document.insertString(document.getTextLength(), "\n" + key.replaceAll(" ", "\\\\ ") + " = ");
                 //                editor.getCaretModel().getPrimaryCaret().moveToOffset(document.getTextLength());
-            }
-        }.execute();
+        });
     }
 }

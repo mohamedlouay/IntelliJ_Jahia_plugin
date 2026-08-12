@@ -18,10 +18,8 @@ import fr.tolc.jahia.intellij.plugin.cnd.toolWindow.JahiaTreeStructure;
 import fr.tolc.jahia.intellij.plugin.cnd.utils.CndPluginUtil;
 import fr.tolc.jahia.intellij.plugin.cnd.utils.CndProjectFilesUtil;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.java.generate.exception.PluginException;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -48,9 +46,9 @@ public class CndStartupActivity implements StartupActivity {
         if (!cndJarGenerationDone) {
             logger.info("CND jar generation started");
             File jahiaPluginSubFolder = CndPluginUtil.getPluginFile(JAHIA_PLUGIN_SUBFOLDER);
-            if (jahiaPluginSubFolder.exists() && jahiaPluginSubFolder.isDirectory()) {
+            if (jahiaPluginSubFolder != null && jahiaPluginSubFolder.exists() && jahiaPluginSubFolder.isDirectory()) {
                 File jarFile = CndPluginUtil.getPluginFile(JAHIA_PLUGIN_SUBFOLDER + "/" + JAHIA_CND_JAR_NAME);
-                if (jarFile.exists()) {
+                if (jarFile != null && jarFile.exists()) {
                     jarFile.delete();
                 }
                 try {
@@ -65,7 +63,7 @@ public class CndStartupActivity implements StartupActivity {
 
         ApplicationManager.getApplication().invokeLater(() -> ApplicationManager.getApplication().runWriteAction(() -> {
             File jahiaPluginSubFolder = CndPluginUtil.getPluginFile(JAHIA_PLUGIN_SUBFOLDER);
-            if (jahiaPluginSubFolder.exists() && jahiaPluginSubFolder.isDirectory()) {
+            if (jahiaPluginSubFolder != null && jahiaPluginSubFolder.exists() && jahiaPluginSubFolder.isDirectory()) {
                 Collection<VirtualFile> virtualFiles = CndProjectFilesUtil.getProjectCndFiles(project);
 
                 //Add jars to the modules libraries
@@ -141,8 +139,11 @@ public class CndStartupActivity implements StartupActivity {
                     });
                 }
             } else {
-                logger.error("Error finding Jahia plugin resources folder");
-                throw new PluginException("Error finding Jahia plugin resources folder", new FileNotFoundException("Missing folder " + jahiaPluginSubFolder.getPath()));
+                // Was throwing org.jetbrains.java.generate.exception.PluginException -- an internal
+                // class of the Java plugin's generate-toString subsystem -- from inside a write
+                // action at project open. Degrade gracefully instead: without the bundled folder the
+                // base Jahia nodetypes are simply unavailable, which is not worth killing startup.
+                logger.warn("Jahia plugin resources folder not found; base CND nodetypes will be unavailable");
             }
         }));
     }

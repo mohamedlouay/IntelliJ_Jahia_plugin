@@ -14,7 +14,7 @@ import com.intellij.ide.projectView.impl.nodes.BasePsiNode;
 import com.intellij.ide.util.treeView.AbstractTreeNode;
 import com.intellij.openapi.actionSystem.PlatformDataKeys;
 import com.intellij.openapi.application.ApplicationManager;
-import com.intellij.openapi.fileTypes.StdFileTypes;
+import com.intellij.lang.properties.PropertiesFileType;
 import com.intellij.openapi.project.DumbAware;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Computable;
@@ -103,7 +103,7 @@ public class ViewMergerTreeStructureProvider implements TreeStructureProvider, D
                     for (ProjectViewNode<?> element : copy) {
                         if (element.getValue() instanceof PsiFile) {
                             PsiFile file = (PsiFile) element.getValue();
-                            if (file.getFileType() != StdFileTypes.PROPERTIES) {
+                            if (file.getFileType() != PropertiesFileType.INSTANCE) {
                                 VirtualFile virtualFile = file.getVirtualFile();
 
                                 ViewModel viewModel = CndProjectFilesUtil.getViewModelFromPotentialViewFile(virtualFile);

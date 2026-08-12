@@ -17,7 +17,7 @@ import java.util.jar.JarOutputStream;
 import java.util.zip.ZipEntry;
 
 import com.intellij.ide.plugins.IdeaPluginDescriptor;
-import com.intellij.ide.plugins.PluginManager;
+import com.intellij.ide.plugins.PluginManagerCore;
 import com.intellij.openapi.extensions.PluginId;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.module.ModuleManager;
@@ -32,17 +32,40 @@ public class CndPluginUtil {
     private static final String CLASSES_FOLDER = "classes";
     private static final String PLUGIN_FOLDER_NAME = ".IntelliJ_Jahia_Plugin";
 
-    private static File pluginFolder = getPlugin().getPath();
-//    private static File pluginFolder = new File(getPlugin().getPath().getAbsolutePath() + "/IntelliJ_Jahia_Plugin.jar");
-    
-    private static IdeaPluginDescriptor getPlugin() {
-        return PluginManager.getPlugin(PluginId.findId(PLUGIN_ID));
+    /**
+     * Resolved lazily, never in a static initializer: PluginId lookup can return null, and an
+     * NPE at class-initialization time would raise ExceptionInInitializerError and take down
+     * every caller of this class at once rather than failing the one operation that needs it.
+     */
+    private static volatile File pluginFolder;
+
+    @Nullable
+    private static File getPluginFolder() {
+        File folder = pluginFolder;
+        if (folder == null) {
+            IdeaPluginDescriptor descriptor = PluginManagerCore.getPlugin(PluginId.getId(PLUGIN_ID));
+            if (descriptor == null) {
+                return null;
+            }
+            Path path = descriptor.getPluginPath();
+            if (path == null) {
+                return null;
+            }
+            folder = path.toFile();
+            pluginFolder = folder;
+        }
+        return folder;
     }
 
-    @NotNull
+    @Nullable
     public static File getPluginFile(String filePath) {
-        if (pluginFolder.getAbsolutePath().endsWith(".jar")) {
-            File plugins = pluginFolder.getParentFile();
+        File folder = getPluginFolder();
+        if (folder == null) {
+            return null;
+        }
+
+        if (folder.getAbsolutePath().endsWith(".jar")) {
+            File plugins = folder.getParentFile();
             File newPluginFolder = new File(plugins.getAbsolutePath() + "/" + PLUGIN_FOLDER_NAME);
             if (newPluginFolder.exists()) {
                 try {
@@ -51,23 +74,25 @@ public class CndPluginUtil {
                     //Nothing to do
                 }
             }
-            extractJarToFolder(pluginFolder, newPluginFolder, "plugin.xml");
+            extractJarToFolder(folder, newPluginFolder, "plugin.xml");
+            // cache the exploded folder, otherwise the jar is re-extracted on every call
+            folder = newPluginFolder;
             pluginFolder = newPluginFolder;
         }
 
-        File candidateFile = new File(pluginFolder.getAbsolutePath() + "/" + filePath);
+        File candidateFile = new File(folder.getAbsolutePath() + "/" + filePath);
         if (candidateFile.exists()) {
             return candidateFile;
         }
 
         //in case of plugins-sandbox
-        return new File(pluginFolder.getAbsolutePath() + "/" + CLASSES_FOLDER + "/" + filePath);
+        return new File(folder.getAbsolutePath() + "/" + CLASSES_FOLDER + "/" + filePath);
     }
 
     @Nullable
     public static Path getPluginFilePath(String filePath) {
         File pluginFile = getPluginFile(filePath);
-        if (pluginFile.exists()) {
+        if (pluginFile != null && pluginFile.exists()) {
             return Paths.get(pluginFile.getAbsolutePath());
         }
         return null;

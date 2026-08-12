@@ -13,6 +13,7 @@ import com.intellij.openapi.fileChooser.FileChooserDescriptor;
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.project.ProjectUtil;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.pom.Navigatable;
 import com.intellij.psi.PsiFile;
@@ -73,7 +74,7 @@ public class CreateNodeTypeTranslationsQuickFix extends BaseIntentionAction {
 //                    createNodeTypeTranslations(project, propertiesFile);
 //                } else {
                     final FileChooserDescriptor descriptor = FileChooserDescriptorFactory.createSingleFileDescriptor(PropertiesFileType.INSTANCE);
-                    descriptor.setRoots(project.getBaseDir());
+                    descriptor.setRoots(ProjectUtil.guessProjectDir(project));
                     final VirtualFile[] files = FileChooser.chooseFiles(descriptor, project, null);
                     for (VirtualFile file: files) {
                         PropertiesFile propertiesFile = (PropertiesFile) PsiManager.getInstance(project).findFile(file);
