@@ -5,7 +5,7 @@ import com.intellij.patterns.PlatformPatterns;
 import com.intellij.psi.PsiLiteralExpression;
 import com.intellij.psi.PsiReferenceContributor;
 import com.intellij.psi.PsiReferenceRegistrar;
-import com.intellij.psi.xml.XmlElementType;
+import com.intellij.psi.xml.XmlTokenType;
 import fr.tolc.jahia.intellij.plugin.cnd.psi.CndTypes;
 import org.jetbrains.annotations.NotNull;
 
@@ -26,7 +26,7 @@ public class CndReferenceContributor extends PsiReferenceContributor {
         //        registrar.registerReferenceProvider(PlatformPatterns.psiElement(CndTypes.PROPERTY_CONSTRAINT_VALUE),      cndReferenceProvider);  //Cnd property weakreference constraint
         
 //        registrar.registerReferenceProvider(PlatformPatterns.psiElement(XmlElementType.XML_ATTRIBUTE_VALUE),      cndReferenceProvider);  //XML Attribute value
-        registrar.registerReferenceProvider(PlatformPatterns.psiElement(XmlElementType.XML_DATA_CHARACTERS),      cndReferenceProvider);  //XML Text
+        registrar.registerReferenceProvider(PlatformPatterns.psiElement(XmlTokenType.XML_DATA_CHARACTERS),      cndReferenceProvider);  //XML Text
         
         registrar.registerReferenceProvider(PlatformPatterns.psiElement(PropertiesTokenTypes.KEY_CHARACTERS),    cndReferenceProvider);  //Properties
     }

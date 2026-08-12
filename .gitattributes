@@ -1,0 +1,16 @@
+# Normalize text files to LF in the repository.
+* text=auto eol=lf
+
+# The Gradle wrapper shell script MUST keep LF: with CRLF it fails on
+# Linux/macOS (and therefore in CI) with "bad interpreter".
+gradlew text eol=lf
+
+# Windows-only scripts keep CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binaries: never touch.
+*.jar binary
+*.zip binary
+*.png binary
+*.skeleton binary

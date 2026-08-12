@@ -16,7 +16,7 @@ import com.intellij.javaee.el.psi.ELVariable;
 import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.xml.XmlAttribute;
 import com.intellij.psi.xml.XmlAttributeValue;
-import com.intellij.psi.xml.XmlElementType;
+import com.intellij.psi.xml.XmlTokenType;
 import com.intellij.psi.xml.XmlTag;
 import com.intellij.util.ProcessingContext;
 import fr.tolc.jahia.intellij.plugin.cnd.utils.JspUtil;
@@ -48,7 +48,7 @@ public class CndJspReferenceProvider extends PsiReferenceProvider {
                     return psiReferences.toArray(psiReferencesArray);
                 }
             } else {
-                Set<PsiElement> elements = PsiUtil.findDescendantsByType(element, ELElementTypes.EL_LITERAL_EXPRESSION, XmlElementType.XML_ATTRIBUTE_VALUE_TOKEN);
+                Set<PsiElement> elements = PsiUtil.findDescendantsByType(element, ELElementTypes.EL_LITERAL_EXPRESSION, XmlTokenType.XML_ATTRIBUTE_VALUE_TOKEN);
 
                 if (!elements.isEmpty()) {
                     for (PsiElement psiElement : elements) {

@@ -18,7 +18,7 @@ import org.jetbrains.annotations.NotNull;
 public class ViewDeleteProvider implements DeleteProvider {
     private final PsiElement[] elements;
 
-    public ViewDeleteProvider(final Collection<AbstractTreeNode<?>> selected) {
+    public ViewDeleteProvider(final Collection<? extends AbstractTreeNode<?>> selected) {
         elements = collectViewPsiElements(selected);
     }
 
@@ -31,7 +31,7 @@ public class ViewDeleteProvider implements DeleteProvider {
         return DeleteHandler.shouldEnableDeleteAction(elements);
     }
 
-    private static PsiElement[] collectViewPsiElements(Collection<AbstractTreeNode<?>> selected) {
+    private static PsiElement[] collectViewPsiElements(Collection<? extends AbstractTreeNode<?>> selected) {
         Set<PsiElement> result = new HashSet<>();
         for (AbstractTreeNode<?> node : selected) {
             if (node.getValue() instanceof View) {

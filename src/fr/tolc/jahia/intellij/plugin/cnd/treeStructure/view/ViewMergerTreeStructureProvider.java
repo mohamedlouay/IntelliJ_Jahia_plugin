@@ -134,7 +134,8 @@ public class ViewMergerTreeStructureProvider implements TreeStructureProvider, D
         return children;
     }
 
-    public Object getData(Collection<AbstractTreeNode<?>> selected, String dataId) {
+    @Override
+    public Object getData(Collection<? extends AbstractTreeNode<?>> selected, String dataId) {
         if (selected != null) {
             if (View.DATA_KEY.is(dataId)) {
                 List<View> result = new ArrayList<>();
