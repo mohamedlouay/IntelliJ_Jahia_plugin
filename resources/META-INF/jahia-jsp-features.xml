@@ -6,8 +6,10 @@
 
 		<!-- Views -->
 		<completion.contributor language="JSP" implementationClass="fr.tolc.jahia.intellij.plugin.cnd.completion.JspCompletionContributor"/>
-		<codeInsight.lineMarkerProvider language="JSP" implementationClass="fr.tolc.jahia.intellij.plugin.cnd.lineMarker.CndJspLineMarkerProvider"/>
 
+		<!-- NOTE: no language attribute, so this registers for Language.ANY. Left as-is:
+		     the patterns target JavaEE EL element types, which are injected rather than
+		     JSP-owned, so narrowing it to language="JSP" would need to be verified first. -->
 		<psi.referenceContributor order="first" implementation="fr.tolc.jahia.intellij.plugin.cnd.references.CndJspReferenceContributor"/>
 	</extensions>
 </idea-plugin>
