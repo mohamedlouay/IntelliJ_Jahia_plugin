@@ -14,7 +14,7 @@ import com.intellij.psi.PsiElement;
 import com.intellij.psi.xml.XmlAttributeValue;
 import com.intellij.psi.xml.XmlToken;
 import fr.tolc.jahia.intellij.plugin.cnd.utils.PsiUtil;
-import org.apache.commons.lang.StringUtils;
+import com.intellij.openapi.util.text.StringUtil;
 import org.jetbrains.annotations.NotNull;
 
 public class CndJspLineMarkerProvider extends RelatedItemLineMarkerProvider {
@@ -29,8 +29,8 @@ public class CndJspLineMarkerProvider extends RelatedItemLineMarkerProvider {
 
                 Matcher matcher = propertyGetRegex.matcher(value);
                 while (matcher.find()) {
-                    String nodeVar = StringUtils.isNotBlank(matcher.group(1)) ? matcher.group(1) : matcher.group(3);
-                    String propertyName = StringUtils.isNotBlank(matcher.group(2)) ? matcher.group(2) : matcher.group(4);
+                    String nodeVar = !StringUtil.isEmptyOrSpaces(matcher.group(1)) ? matcher.group(1) : matcher.group(3);
+                    String propertyName = !StringUtil.isEmptyOrSpaces(matcher.group(2)) ? matcher.group(2) : matcher.group(4);
 
                     LineMarkerUtil.createPropertyLineMarkers(elExpression, result, nodeVar, propertyName);
                 }

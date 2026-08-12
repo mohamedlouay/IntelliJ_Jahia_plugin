@@ -8,7 +8,7 @@ import com.intellij.psi.xml.XmlTag;
 import fr.tolc.jahia.intellij.plugin.cnd.enums.ResourcesTypeEnum;
 import fr.tolc.jahia.intellij.plugin.cnd.model.ResourcesModel;
 import fr.tolc.jahia.intellij.plugin.cnd.model.ViewModel;
-import org.apache.commons.lang.StringUtils;
+import com.intellij.openapi.util.text.StringUtil;
 import org.jetbrains.annotations.Nullable;
 
 public class JspUtil {
@@ -53,7 +53,7 @@ public class JspUtil {
                                 XmlAttribute templateTypeAttribute = ((XmlTag) xmlTag).getAttribute(TAG_ATTRIBUTE_TEMPLATETYPE);
                                 if (templateTypeAttribute != null) {
                                     String templateType = templateTypeAttribute.getValue();
-                                    if (StringUtils.isNotBlank(templateType)) {
+                                    if (!StringUtil.isEmptyOrSpaces(templateType)) {
                                         viewModel.setType(templateType);
                                     }
                                 }
@@ -86,7 +86,7 @@ public class JspUtil {
                             XmlAttribute typeAttribute = ((XmlTag) xmlTag).getAttribute(TAG_ATTRIBUTE_TYPE);
                             if (typeAttribute != null) {
                                 String type = typeAttribute.getValue();
-                                if (StringUtils.isNotBlank(type)) {
+                                if (!StringUtil.isEmptyOrSpaces(type)) {
                                     return new ResourcesModel(ResourcesTypeEnum.fromAnything(type), value);
                                 }
                             }

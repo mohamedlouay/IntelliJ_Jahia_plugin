@@ -23,7 +23,7 @@ import fr.tolc.jahia.intellij.plugin.cnd.psi.CndSubNode;
 import fr.tolc.jahia.intellij.plugin.cnd.psi.CndSubNodeType;
 import fr.tolc.jahia.intellij.plugin.cnd.utils.CndPluginUtil;
 import fr.tolc.jahia.intellij.plugin.cnd.utils.CndProjectFilesUtil;
-import org.apache.commons.lang.StringUtils;
+import com.intellij.openapi.util.text.StringUtil;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.NotNull;
 
@@ -82,7 +82,7 @@ public class CreateNodeTypeViewQuickFix extends BaseIntentionAction {
                     String viewLanguage = createNodeTypeViewDialog.getViewLanguage();
                     Module module = createNodeTypeViewDialog.getModule();
 
-                    if (StringUtils.isNotBlank(viewType) && StringUtils.isNotBlank(viewLanguage)) {
+                    if (!StringUtil.isEmptyOrSpaces(viewType) && !StringUtil.isEmptyOrSpaces(viewLanguage)) {
                         String jahiaWorkFolderPath = CndProjectFilesUtil.getJahiaWorkFolderPath(module);
                         String finalDirectory = CndProjectFilesUtil.getNodeTypeViewsFolderPath(jahiaWorkFolderPath, namespace, nodeTypeName, viewType);
                         String fileName = CndProjectFilesUtil.getNodeTypeViewFileName(nodeTypeName, viewName, viewLanguage, isHiddenView);
@@ -177,7 +177,7 @@ public class CreateNodeTypeViewQuickFix extends BaseIntentionAction {
                         toAppend.append(PROPERTY_MULTIPLE_TEMPLATE.replace(VAR_NAME, varName).replace(NAME, property.getPropertyName()));
                         toAppendLoops.append(PROPERTY_LOOP_TEMPLATE.replace(VAR_NAME, varName).replace(ACCESSOR, accessor));
                     } else {
-                        if (StringUtils.isNotBlank(accessor) && !"*".equals(property.getPropertyName())) {
+                        if (!StringUtil.isEmptyOrSpaces(accessor) && !"*".equals(property.getPropertyName())) {
                             String varName = convertToVariableName(property.getPropertyName());
                             toAppend.append(PROPERTY_TEMPLATE.replace(VAR_NAME, varName).replace(NAME, property.getPropertyName()).replace(ACCESSOR, accessor));
                         }
@@ -194,7 +194,7 @@ public class CreateNodeTypeViewQuickFix extends BaseIntentionAction {
             for (CndSubNode subNode : subNodes) {
                 for (CndSubNodeType subNodeType : subNode.getSubNodeTypeList()) {
                     String subNodeName = subNode.getSubNodeName();
-                    if (StringUtils.isNotBlank(subNodeName)) {
+                    if (!StringUtil.isEmptyOrSpaces(subNodeName)) {
                         if ("*".equals(subNodeName)) {
                             String varName = convertNodeTypeToVariableName(subNodeType);
                             toAppend.append(SUBNODES_TEMPLATE.replace(VAR_NAME, varName).replace(NODE_TYPE, subNodeType.getText()));

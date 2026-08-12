@@ -17,7 +17,7 @@ import fr.tolc.jahia.intellij.plugin.cnd.icons.CndIcons;
 import fr.tolc.jahia.intellij.plugin.cnd.psi.CndNodeType;
 import fr.tolc.jahia.intellij.plugin.cnd.psi.CndProperty;
 import fr.tolc.jahia.intellij.plugin.cnd.utils.CndUtil;
-import org.apache.commons.lang.StringUtils;
+import com.intellij.openapi.util.text.StringUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -64,7 +64,7 @@ public class CndPropertyIdentifierReference extends PsiReferenceBase<PsiElement>
             if (cndNodeType != null) {
                 Set<CndProperty> properties = cndNodeType.getProperties();
                 for (final CndProperty property : properties) {
-                    if (StringUtils.isNotBlank(property.getPropertyName())) {
+                    if (!StringUtil.isEmptyOrSpaces(property.getPropertyName())) {
                         if (forPropertiesFile) {
                             variants.add(LookupElementBuilder.create(property.getPropertyName().replace(':', '_')).withIcon(CndIcons.PROPERTY).withTypeText(property.getContainingFile().getName()));
                         } else {

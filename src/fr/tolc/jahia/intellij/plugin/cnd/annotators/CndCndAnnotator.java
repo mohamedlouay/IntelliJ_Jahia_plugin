@@ -24,7 +24,7 @@ import fr.tolc.jahia.intellij.plugin.cnd.quickfixes.CreateNodeTypeViewQuickFix;
 import fr.tolc.jahia.intellij.plugin.cnd.utils.CndProjectFilesUtil;
 import fr.tolc.jahia.intellij.plugin.cnd.utils.CndTranslationUtil;
 import fr.tolc.jahia.intellij.plugin.cnd.utils.CndUtil;
-import org.apache.commons.lang.StringUtils;
+import com.intellij.openapi.util.text.StringUtil;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.regex.Matcher;
@@ -206,7 +206,7 @@ public class CndCndAnnotator implements Annotator {
                             holder.createErrorAnnotation(element.getTextRange(), "Invalid CND node type (mising colon)");
                         } else {
                             PsiElement nodeTypeElt = colonElt.getNextSibling();
-                            if (nodeTypeElt == null || StringUtils.isBlank(nodeTypeElt.getText())) {
+                            if (nodeTypeElt == null || StringUtil.isEmptyOrSpaces(nodeTypeElt.getText())) {
                                 holder.createErrorAnnotation(element.getTextRange(), "Invalid CND node type (missing node type name)"); 
                             } else {
                                 CndNodeType cndNodeType = CndUtil.findNodeType(element.getProject(), namespaceElt.getText(), nodeTypeElt.getText());

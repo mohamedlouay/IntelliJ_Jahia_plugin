@@ -15,7 +15,7 @@ import fr.tolc.jahia.intellij.plugin.cnd.enums.ResourcesTypeEnum;
 import fr.tolc.jahia.intellij.plugin.cnd.icons.CndIcons;
 import fr.tolc.jahia.intellij.plugin.cnd.model.ResourcesModel;
 import fr.tolc.jahia.intellij.plugin.cnd.utils.CndProjectFilesUtil;
-import org.apache.commons.lang.StringUtils;
+import com.intellij.openapi.util.text.StringUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -61,7 +61,7 @@ public class ResourceReference extends PsiReferenceBase<PsiElement> implements P
     @Override
     public ResolveResult[] multiResolve(boolean incompleteCode) {
         List<ResolveResult> results = new ArrayList<>();
-        if (StringUtils.isNotBlank(resource)) {
+        if (!StringUtil.isEmptyOrSpaces(resource)) {
             Project project = myElement.getProject();
             Module module = CndProjectFilesUtil.getModuleForFile(project, myElement.getContainingFile().getVirtualFile());
             PsiFile resourceFile = CndProjectFilesUtil.getResource(module, resourcesModel.getType(), resource);

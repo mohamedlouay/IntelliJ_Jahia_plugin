@@ -1,6 +1,6 @@
 package fr.tolc.jahia.intellij.plugin.cnd.model;
 
-import org.apache.commons.lang.StringUtils;
+import com.intellij.openapi.util.text.StringUtil;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -24,7 +24,7 @@ public class NodeTypeModel {
         this.sourceString = sourceString;
 
         String[] split = null;
-        if (StringUtils.isNotBlank(sourceString)) {
+        if (!StringUtil.isEmptyOrSpaces(sourceString)) {
             if (isFolder) {
                 Matcher matcher = nodeTypeFolderRegex.matcher(sourceString);
                 if (matcher.matches()) {

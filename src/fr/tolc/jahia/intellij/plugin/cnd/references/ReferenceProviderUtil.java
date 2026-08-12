@@ -15,7 +15,7 @@ import fr.tolc.jahia.intellij.plugin.cnd.references.types.CndNamespaceIdentifier
 import fr.tolc.jahia.intellij.plugin.cnd.references.types.CndNodeTypeIdentifierReference;
 import fr.tolc.jahia.intellij.plugin.cnd.references.types.CndPropertyIdentifierReference;
 import fr.tolc.jahia.intellij.plugin.cnd.utils.CndProjectFilesUtil;
-import org.apache.commons.lang.StringUtils;
+import com.intellij.openapi.util.text.StringUtil;
 import org.jetbrains.annotations.NotNull;
 
 public class ReferenceProviderUtil {
@@ -43,7 +43,7 @@ public class ReferenceProviderUtil {
     }
     
     public static void createNodeTypeReferences(@NotNull PsiElement element, @NotNull List<PsiReference> psiReferences, String text, int offsetShift) {
-        if (StringUtils.isNotBlank(text)) {
+        if (!StringUtil.isEmptyOrSpaces(text)) {
             Matcher matcher = nodeTypeGlobalRegex.matcher(text);
             while (matcher.find()) {
                 String group = matcher.group();

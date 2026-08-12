@@ -16,7 +16,7 @@ import fr.tolc.jahia.intellij.plugin.cnd.enums.ResourcesTypeEnum;
 import fr.tolc.jahia.intellij.plugin.cnd.model.NodeTypeModel;
 import fr.tolc.jahia.intellij.plugin.cnd.model.ViewModel;
 import fr.tolc.jahia.intellij.plugin.cnd.psi.CndNodeType;
-import org.apache.commons.lang.StringUtils;
+import com.intellij.openapi.util.text.StringUtil;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -58,7 +58,7 @@ public class CndProjectFilesUtil {
                         jahiaWorkFolderPath = path.substring(0, path.lastIndexOf(JAHIA_7_PATH) + JAHIA_7_PATH.length());
                     }
 
-                    if (StringUtils.isNotBlank(jahiaWorkFolderPath)) {
+                    if (!StringUtil.isEmptyOrSpaces(jahiaWorkFolderPath)) {
                         JAHIA_WORK_FOLDERS_PATH_MAP.put(module, jahiaWorkFolderPath);
                     }
                 }
@@ -129,7 +129,7 @@ public class CndProjectFilesUtil {
         if (isHiddenView && !viewName.contains("hidden.") && !viewName.contains(".hidden")) {
             fileName += "hidden.";
         }
-        if (StringUtils.isNotBlank(viewName) && !"default".equals(viewName)) {
+        if (!StringUtil.isEmptyOrSpaces(viewName) && !"default".equals(viewName)) {
             fileName += viewName + ".";
         }
         fileName += viewLanguage;
@@ -302,7 +302,7 @@ public class CndProjectFilesUtil {
                 File[] viewFiles = viewTypeFolder.listFiles(new FilenameFilter() {
                     @Override
                     public boolean accept(File dir, String name) {
-                        if (StringUtils.isNotBlank(viewName)) {
+                        if (!StringUtil.isEmptyOrSpaces(viewName)) {
                             return (name.startsWith(nodeTypeName + "." + viewName + ".") && (name.lastIndexOf('.') == (nodeTypeName.length() + viewName.length() + 1))) || (ViewModel.DEFAULT.equals(viewName) && name.startsWith(nodeTypeName) && name.split("\\.").length == 2);
                         } else {
                             return name.startsWith(nodeTypeName) && name.split("\\.").length == 2;
@@ -565,10 +565,12 @@ public class CndProjectFilesUtil {
                     }
                 }
             } else {
-                res.put(
-                        StringUtils.substringAfter(file.getAbsolutePath(), relativeToFolder).replace("\\", "/"),
-                        getPsiFileFromIoFile(project, file)
-                );
+                // StringUtil.substringAfter returns null when the separator is absent,
+                // where commons-lang returned "". Guard against the NPE that would follow.
+                String relativePath = StringUtil.substringAfter(file.getAbsolutePath(), relativeToFolder);
+                if (relativePath != null) {
+                    res.put(relativePath.replace("\\", "/"), getPsiFileFromIoFile(project, file));
+                }
             }
         }
 

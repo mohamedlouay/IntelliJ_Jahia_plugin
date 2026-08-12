@@ -15,7 +15,7 @@ import com.intellij.psi.ResolveResult;
 import fr.tolc.jahia.intellij.plugin.cnd.icons.CndIcons;
 import fr.tolc.jahia.intellij.plugin.cnd.utils.CndUtil;
 import fr.tolc.jahia.intellij.plugin.cnd.psi.CndNodeType;
-import org.apache.commons.lang.StringUtils;
+import com.intellij.openapi.util.text.StringUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -45,7 +45,7 @@ public class CndNodeTypeIdentifierReference extends PsiReferenceBase<PsiElement>
         List<CndNodeType> nodeTypes = CndUtil.findNodeTypes(project, namespace);
         List<LookupElement> variants = new ArrayList<LookupElement>();
         for (final CndNodeType cndNodeType : nodeTypes) {
-            if (StringUtils.isNotBlank(cndNodeType.getNodeTypeName())) {
+            if (!StringUtil.isEmptyOrSpaces(cndNodeType.getNodeTypeName())) {
                 Icon icon;
                 if (cndNodeType.isMixin()) {
                     icon = CndIcons.MIXIN;

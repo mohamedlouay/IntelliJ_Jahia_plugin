@@ -16,7 +16,7 @@ import com.intellij.util.IncorrectOperationException;
 import fr.tolc.jahia.intellij.plugin.cnd.dialogs.CreateCndFileDialog;
 import fr.tolc.jahia.intellij.plugin.cnd.utils.CndPluginUtil;
 import fr.tolc.jahia.intellij.plugin.cnd.utils.CndProjectFilesUtil;
-import org.apache.commons.lang.StringUtils;
+import com.intellij.openapi.util.text.StringUtil;
 
 import java.io.File;
 import java.io.IOException;
@@ -35,7 +35,7 @@ public class NewCndFileAction extends AnAction {
 
                 if (dialog.isOkClicked()) {
                     String fileName = dialog.getCndFileName();
-                    if (StringUtils.isNotBlank(fileName)) {
+                    if (!StringUtil.isEmptyOrSpaces(fileName)) {
                         Project project = e.getProject();
                         VirtualFile virtualFile = e.getData(CommonDataKeys.VIRTUAL_FILE);
                         if (virtualFile != null && project != null) {
@@ -54,7 +54,7 @@ public class NewCndFileAction extends AnAction {
         VirtualFile virtualFile = e.getData(CommonDataKeys.VIRTUAL_FILE);
         if (virtualFile != null && project != null) {
             String metaInfFolderPath = CndProjectFilesUtil.getJahiaMetaInfFolderPath(e.getProject(), virtualFile);
-            if (StringUtils.isNotBlank(metaInfFolderPath)) {
+            if (!StringUtil.isEmptyOrSpaces(metaInfFolderPath)) {
                 showAction = virtualFile.getPath().contains(metaInfFolderPath);
             }
         }

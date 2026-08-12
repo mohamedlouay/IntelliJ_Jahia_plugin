@@ -1,6 +1,6 @@
 package fr.tolc.jahia.intellij.plugin.cnd.model;
 
-import org.apache.commons.lang.StringUtils;
+import com.intellij.openapi.util.text.StringUtil;
 
 public class ViewModel {
     public static final String DEFAULT = "default";
@@ -66,7 +66,7 @@ public class ViewModel {
     }
     
     public boolean isDefault() {
-        return StringUtils.isBlank(this.name) || (DEFAULT + ".").equals(this.name);
+        return StringUtil.isEmptyOrSpaces(this.name) || (DEFAULT + ".").equals(this.name);
     }
     
     public boolean isSameView(ViewModel viewModel) {

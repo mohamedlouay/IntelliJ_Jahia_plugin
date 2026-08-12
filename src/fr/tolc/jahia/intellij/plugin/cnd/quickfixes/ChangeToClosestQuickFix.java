@@ -7,7 +7,6 @@ import com.intellij.openapi.project.Project;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.util.IncorrectOperationException;
-import org.apache.commons.lang.StringUtils;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.NotNull;
 
@@ -44,24 +43,14 @@ public class ChangeToClosestQuickFix extends BaseIntentionAction {
         ApplicationManager.getApplication().invokeLater(new Runnable() {
             @Override
             public void run() {
-                String replacement = getClosest(options, element.getText());
-
                 //TODO: change element text to closest one
+                // The former getClosest() helper computed a Levenshtein distance via
+                // commons-lang and assigned it to a local that was never read, so it was
+                // removed with commons-lang rather than ported. Reinstate it with
+                // com.intellij.openapi.util.text.StringUtil#difference or commons-text
+                // if this quick fix is ever implemented.
 //               element.getTextRange().
             }
         });
-    }
-    
-    private static String getClosest(String[] options, String value) {
-        String closestOption = options[0];
-        int closestDistance = Integer.MAX_VALUE;
-        for (String option : options) {
-            int distance = StringUtils.getLevenshteinDistance(option, value);
-            if (distance < closestDistance) {
-                closestDistance = distance;
-                closestOption = option;
-            }
-        }
-        return closestOption;
     }
 }

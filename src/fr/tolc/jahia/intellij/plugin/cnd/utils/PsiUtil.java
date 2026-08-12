@@ -12,7 +12,7 @@ import com.intellij.psi.PsiElement;
 import com.intellij.psi.tree.IElementType;
 import fr.tolc.jahia.intellij.plugin.cnd.psi.CndNodeType;
 import fr.tolc.jahia.intellij.plugin.cnd.psi.CndProperty;
-import org.apache.commons.lang.ArrayUtils;
+import com.intellij.util.ArrayUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -85,7 +85,7 @@ public class PsiUtil {
     public static Set<ASTNode> findDescendantsByType(@NotNull ASTNode node, @Nullable IElementType... types) {
         Set<ASTNode> result = new LinkedHashSet<>();
         for (ASTNode child : node.getChildren(null)) {
-            if (types == null || ArrayUtils.contains(types, child.getElementType())) {
+            if (types == null || ArrayUtil.contains(child.getElementType(), types)) {
                 result.add(child);
             }
             result.addAll(findDescendantsByType(child, types));
@@ -96,7 +96,7 @@ public class PsiUtil {
     public static Set<ASTNode> findFirstDescendantsByType(@NotNull ASTNode node, @Nullable IElementType... types) {
         Set<ASTNode> result = new LinkedHashSet<>();
         for (ASTNode child : node.getChildren(null)) {
-            if (types == null || ArrayUtils.contains(types, child.getElementType())) {
+            if (types == null || ArrayUtil.contains(child.getElementType(), types)) {
                 result.add(child);
             } else {
                 result.addAll(findFirstDescendantsByType(child, types));

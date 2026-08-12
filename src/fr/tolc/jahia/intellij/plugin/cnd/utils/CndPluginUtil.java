@@ -23,7 +23,7 @@ import com.intellij.openapi.module.Module;
 import com.intellij.openapi.module.ModuleManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.io.FileUtil;
-import org.apache.commons.lang.ArrayUtils;
+import com.intellij.util.ArrayUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -101,7 +101,7 @@ public class CndPluginUtil {
             }
 
             String[] split = entryName.split("\\.");
-            if (ArrayUtils.contains(extensions, split[split.length - 1])) {
+            if (ArrayUtil.contains(split[split.length - 1], extensions)) {
                 jarOut.putNextEntry(new ZipEntry(entryName));
                 jarOut.write(Files.readAllBytes(Paths.get(file.getAbsolutePath())));
                 jarOut.closeEntry();

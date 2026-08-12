@@ -57,7 +57,7 @@ public class CndJspElVariablesProvider extends ElVariablesProvider {
 //            if(tag != null) {
 //                if ("http://www.jahia.org/tags/jcr".equals(tag.getNamespace()) && "nodeProperty".equals(tag.getLocalName())) {
 //                    String varName = tag.getAttributeValue("var");
-//                    if (StringUtils.isNotBlank(varName)) {
+//                    if (!StringUtil.isEmptyOrSpaces(varName)) {
 //                        Project project = containingFile.getProject();
 //                        PsiElementFactory elementFactory = JavaPsiFacade.getInstance(project).getElementFactory();
 //                        GlobalSearchScope allScope = GlobalSearchScope.allScope(project);

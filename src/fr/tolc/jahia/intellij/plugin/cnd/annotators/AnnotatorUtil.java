@@ -13,7 +13,7 @@ import fr.tolc.jahia.intellij.plugin.cnd.psi.CndNodeType;
 import fr.tolc.jahia.intellij.plugin.cnd.psi.CndProperty;
 import fr.tolc.jahia.intellij.plugin.cnd.utils.CndProjectFilesUtil;
 import fr.tolc.jahia.intellij.plugin.cnd.utils.CndUtil;
-import org.apache.commons.lang.StringUtils;
+import com.intellij.openapi.util.text.StringUtil;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Set;
@@ -80,7 +80,7 @@ public class AnnotatorUtil {
     }
     
     public static void createNodeTypeAnnotations(@NotNull final PsiElement element, @NotNull AnnotationHolder holder, String text, int offsetShift) {
-        if (StringUtils.isNotBlank(text)) {
+        if (!StringUtil.isEmptyOrSpaces(text)) {
             Matcher matcher = nodeTypeGlobalRegex.matcher(text);
             while (matcher.find()) {
                 String group = matcher.group();

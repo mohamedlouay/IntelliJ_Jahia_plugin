@@ -21,7 +21,7 @@ import com.intellij.psi.xml.XmlTag;
 import com.intellij.util.ProcessingContext;
 import fr.tolc.jahia.intellij.plugin.cnd.utils.JspUtil;
 import fr.tolc.jahia.intellij.plugin.cnd.utils.PsiUtil;
-import org.apache.commons.lang.StringUtils;
+import com.intellij.openapi.util.text.StringUtil;
 import org.jetbrains.annotations.NotNull;
 
 public class CndJspReferenceProvider extends PsiReferenceProvider {
@@ -75,8 +75,8 @@ public class CndJspReferenceProvider extends PsiReferenceProvider {
 
                 Matcher matcher = propertyGetRegex.matcher(value);
                 while (matcher.find()) {
-                    String nodeVar = StringUtils.isNotBlank(matcher.group(1)) ? matcher.group(1) : matcher.group(3);
-                    String propertyName = StringUtils.isNotBlank(matcher.group(2)) ? matcher.group(2) : matcher.group(4);
+                    String nodeVar = !StringUtil.isEmptyOrSpaces(matcher.group(1)) ? matcher.group(1) : matcher.group(3);
+                    String propertyName = !StringUtil.isEmptyOrSpaces(matcher.group(2)) ? matcher.group(2) : matcher.group(4);
 
                     int startOffset = element instanceof ELLiteralExpression ? 1 : 0;
                     int endOffset = element instanceof ELLiteralExpression ? 1 : 0;

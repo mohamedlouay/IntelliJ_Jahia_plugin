@@ -11,7 +11,7 @@ import fr.tolc.jahia.intellij.plugin.cnd.psi.CndNodeType;
 import fr.tolc.jahia.intellij.plugin.cnd.quickfixes.CreateNodeTypeViewQuickFix;
 import fr.tolc.jahia.intellij.plugin.cnd.utils.CndProjectFilesUtil;
 import fr.tolc.jahia.intellij.plugin.cnd.utils.CndUtil;
-import org.apache.commons.lang.StringUtils;
+import com.intellij.openapi.util.text.StringUtil;
 
 import java.io.File;
 
@@ -45,7 +45,7 @@ public class NewNodeTypeViewAction extends AnAction {
         VirtualFile virtualFile = e.getData(CommonDataKeys.VIRTUAL_FILE);
         if (virtualFile != null && project != null) {
             String jahiaWorkFolderPath = CndProjectFilesUtil.getJahiaWorkFolderPath(getModuleForFile(project, virtualFile));
-            if (StringUtils.isNotBlank(jahiaWorkFolderPath) && virtualFile.getPath().contains(jahiaWorkFolderPath)) {
+            if (!StringUtil.isEmptyOrSpaces(jahiaWorkFolderPath) && virtualFile.getPath().contains(jahiaWorkFolderPath)) {
                 NodeTypeModel nodeTypeModel = null;
                 try {
                     nodeTypeModel = new NodeTypeModel(virtualFile.getName(), true);

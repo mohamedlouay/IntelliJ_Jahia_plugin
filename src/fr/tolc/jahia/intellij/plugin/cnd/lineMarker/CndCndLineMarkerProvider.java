@@ -16,7 +16,7 @@ import fr.tolc.jahia.intellij.plugin.cnd.psi.CndPropertyIdentifier;
 import fr.tolc.jahia.intellij.plugin.cnd.psi.CndTypes;
 import fr.tolc.jahia.intellij.plugin.cnd.utils.CndProjectFilesUtil;
 import fr.tolc.jahia.intellij.plugin.cnd.utils.CndTranslationUtil;
-import org.apache.commons.lang.StringUtils;
+import com.intellij.openapi.util.text.StringUtil;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.Icon;
@@ -45,7 +45,7 @@ public class CndCndLineMarkerProvider extends RelatedItemLineMarkerProvider {
             //Custom icon
             String jahiaWorkFolderPath = CndProjectFilesUtil.getJahiaWorkFolderPath(element);
             String nodeTypeNamespace = cndNodeType.getNodeTypeNamespace();
-            if (StringUtils.isNotBlank(jahiaWorkFolderPath) && nodeTypeNamespace != null) {
+            if (!StringUtil.isEmptyOrSpaces(jahiaWorkFolderPath) && nodeTypeNamespace != null) {
                 String iconPath = jahiaWorkFolderPath + "/icons/" + CndTranslationUtil.convertNodeTypeIdentifierToPropertyName(nodeTypeNamespace, cndNodeType.getNodeTypeName()) + ".png";
                 File iconFile = new File(iconPath);
                 if (iconFile.exists()) {

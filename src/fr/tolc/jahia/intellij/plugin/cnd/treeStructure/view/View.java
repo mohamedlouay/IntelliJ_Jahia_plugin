@@ -7,7 +7,7 @@ import java.util.List;
 import com.intellij.openapi.actionSystem.DataKey;
 import com.intellij.psi.PsiFile;
 import fr.tolc.jahia.intellij.plugin.cnd.model.ViewModel;
-import org.apache.commons.lang.StringUtils;
+import com.intellij.openapi.util.text.StringUtil;
 import org.jetbrains.annotations.NotNull;
 
 public class View {
@@ -24,7 +24,7 @@ public class View {
     @NotNull
     public String getName() {
         String name ="default";
-        if (StringUtils.isNotBlank(viewModel.getName())) {
+        if (!StringUtil.isEmptyOrSpaces(viewModel.getName())) {
             name = viewModel.getName();
         }
         return name;
