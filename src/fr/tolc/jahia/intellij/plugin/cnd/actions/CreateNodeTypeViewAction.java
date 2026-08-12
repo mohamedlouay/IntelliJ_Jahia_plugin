@@ -1,10 +1,12 @@
 package fr.tolc.jahia.intellij.plugin.cnd.actions;
 
+import com.intellij.openapi.actionSystem.ActionUpdateThread;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.CommonDataKeys;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiElement;
+import org.jetbrains.annotations.NotNull;
 import fr.tolc.jahia.intellij.plugin.cnd.psi.CndNodeType;
 import fr.tolc.jahia.intellij.plugin.cnd.psi.CndNodeTypeIdentifier;
 import fr.tolc.jahia.intellij.plugin.cnd.quickfixes.CreateNodeTypeViewQuickFix;
@@ -12,8 +14,17 @@ import fr.tolc.jahia.intellij.plugin.cnd.utils.CndProjectFilesUtil;
 
 public class CreateNodeTypeViewAction extends AnAction {
 
+    /**
+     * BGT is mandatory here: update() reads CommonDataKeys.PSI_ELEMENT, a slow data key that
+     * the platform refuses to compute on the EDT.
+     */
     @Override
-    public void actionPerformed(AnActionEvent e) {
+    public @NotNull ActionUpdateThread getActionUpdateThread() {
+        return ActionUpdateThread.BGT;
+    }
+
+    @Override
+    public void actionPerformed(@NotNull AnActionEvent e) {
         PsiElement element  = e.getData(CommonDataKeys.PSI_ELEMENT);
         VirtualFile file = e.getData(CommonDataKeys.VIRTUAL_FILE);
 
@@ -33,7 +44,7 @@ public class CreateNodeTypeViewAction extends AnAction {
     }
 
     @Override
-    public void update(AnActionEvent e) {
+    public void update(@NotNull AnActionEvent e) {
         boolean showAction = false;
         PsiElement element  = e.getData(CommonDataKeys.PSI_ELEMENT);
         if (element != null) {

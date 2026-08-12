@@ -1,9 +1,11 @@
 package fr.tolc.jahia.intellij.plugin.cnd.actions;
 
 import com.intellij.ide.projectView.ProjectView;
+import com.intellij.openapi.actionSystem.ActionUpdateThread;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.CommonDataKeys;
+import org.jetbrains.annotations.NotNull;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.editor.CaretModel;
 import com.intellij.openapi.fileEditor.FileEditorManager;
@@ -25,8 +27,17 @@ import java.nio.file.Path;
 
 public class NewCndFileAction extends AnAction {
 
+    /**
+     * BGT is mandatory here: update() calls getJahiaMetaInfFolderPath, which walks the module
+     * model and the VFS -- far too slow for the EDT.
+     */
     @Override
-    public void actionPerformed(AnActionEvent e) {
+    public @NotNull ActionUpdateThread getActionUpdateThread() {
+        return ActionUpdateThread.BGT;
+    }
+
+    @Override
+    public void actionPerformed(@NotNull AnActionEvent e) {
         ApplicationManager.getApplication().invokeLater(new Runnable() {
             @Override
             public void run() {
@@ -48,7 +59,7 @@ public class NewCndFileAction extends AnAction {
     }
 
     @Override
-    public void update(AnActionEvent e) {
+    public void update(@NotNull AnActionEvent e) {
         boolean showAction = false;
         Project project = e.getProject();
         VirtualFile virtualFile = e.getData(CommonDataKeys.VIRTUAL_FILE);

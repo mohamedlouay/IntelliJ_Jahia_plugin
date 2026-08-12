@@ -1,8 +1,10 @@
 package fr.tolc.jahia.intellij.plugin.cnd.actions;
 
+import com.intellij.openapi.actionSystem.ActionUpdateThread;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.CommonDataKeys;
+import org.jetbrains.annotations.NotNull;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
@@ -19,8 +21,17 @@ import static fr.tolc.jahia.intellij.plugin.cnd.utils.CndProjectFilesUtil.getMod
 
 public class NewNodeTypeViewAction extends AnAction {
 
+    /**
+     * BGT is mandatory here: update() goes through getNodeType, which queries the module model
+     * and resolves node types through FileTypeIndex.
+     */
     @Override
-    public void actionPerformed(AnActionEvent e) {
+    public @NotNull ActionUpdateThread getActionUpdateThread() {
+        return ActionUpdateThread.BGT;
+    }
+
+    @Override
+    public void actionPerformed(@NotNull AnActionEvent e) {
         CndNodeType cndNodeType = getNodeType(e);
         if (cndNodeType != null) {
             Project project = e.getProject();
@@ -31,7 +42,7 @@ public class NewNodeTypeViewAction extends AnAction {
     }
 
     @Override
-    public void update(AnActionEvent e) {
+    public void update(@NotNull AnActionEvent e) {
         boolean showAction = false;
         CndNodeType cndNodeType = getNodeType(e);
         if (cndNodeType != null) {
@@ -53,7 +64,10 @@ public class NewNodeTypeViewAction extends AnAction {
                     //Nothing to do
                 }
 
-                VirtualFile jahiaWorkFolderFile = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(new File(jahiaWorkFolderPath));
+                // Non-refreshing lookup on purpose. This runs from update(), which on BGT holds a
+                // read lock, and a synchronous VFS refresh under a read lock is forbidden. The work
+                // folder belongs to the project, so the VFS already knows about it.
+                VirtualFile jahiaWorkFolderFile = LocalFileSystem.getInstance().findFileByIoFile(new File(jahiaWorkFolderPath));
                 VirtualFile parentDir = virtualFile;
                 while (nodeTypeModel == null && parentDir != null && jahiaWorkFolderFile != null && !parentDir.equals(jahiaWorkFolderFile)) {
                     //Try with parent directory (because of IntelliJ's weird way of merging directories into one if only one subdirectory)
