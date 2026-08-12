@@ -49,7 +49,14 @@
     <postStartupActivity implementation="fr.tolc.jahia.intellij.plugin.cnd.components.CndStartupActivity"/>
 
     <!-- CND -->
-    <fileTypeFactory implementation="fr.tolc.jahia.intellij.plugin.cnd.CndFileTypeFactory"/>
+    <!-- 'name' MUST match CndFileType.getName() exactly. A mismatch registers the file
+         type twice under two names, and FileTypeIndex.getFiles(CndFileType.INSTANCE, ...)
+         then returns nothing at all, silently breaking completion and navigation. -->
+    <fileType name="CND file"
+              implementationClass="fr.tolc.jahia.intellij.plugin.cnd.CndFileType"
+              fieldName="INSTANCE"
+              language="Cnd"
+              extensions="cnd"/>
     <lang.parserDefinition language="Cnd" implementationClass="fr.tolc.jahia.intellij.plugin.cnd.CndParserDefinition"/>
     <lang.syntaxHighlighterFactory language="Cnd" implementationClass="fr.tolc.jahia.intellij.plugin.cnd.CndSyntaxHighlighterFactory"/>
     <!--<colorSettingsPage implementation="fr.tolc.jahia.intellij.plugin.cnd.CndColorSettingsPage"/>-->
