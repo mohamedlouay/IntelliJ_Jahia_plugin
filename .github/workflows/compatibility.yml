@@ -20,6 +20,11 @@ on:
     # cron at :00, and GitHub drops runs it cannot schedule.
     - cron: '17 5 * * 1'
   workflow_dispatch:
+  # TEMPORARY again, and removed in the following commit. workflow_dispatch has no "Run workflow"
+  # button until this file reaches master, and the summary step below has to be exercised once to
+  # be trusted.
+  push:
+    branches: [feat/gradle-build-2025]
 
 permissions:
   contents: read
@@ -52,6 +57,43 @@ jobs:
       # the latest releases and the EAPs.
       - name: Run Plugin Verifier against recommended IDEs
         run: ./gradlew verifyPlugin -PverifyRecommended
+
+      # The verdicts belong on the run page, not only inside a zip. A weekly watchdog whose
+      # findings require downloading and unpacking an artifact is a watchdog nobody reads -- and
+      # the artifact needs credentials, so it is unreachable from anywhere but a browser session.
+      - name: Summarise verdicts
+        if: always()
+        run: |
+          {
+            echo "## Plugin Verifier verdicts"
+            echo
+            if [ ! -d build/reports/pluginVerifier ]; then
+              echo "_No report produced: the verifier did not get far enough._"
+              exit 0
+            fi
+            for verdict in build/reports/pluginVerifier/*/plugins/*/*/verification-verdict.txt; do
+              [ -f "$verdict" ] || continue
+              ide=$(echo "$verdict" | cut -d/ -f4)
+              echo "### $ide"
+              echo '```'
+              head -c 4000 "$verdict"
+              echo '```'
+              echo
+            done
+            problems=$(find build/reports/pluginVerifier -name 'compatibility-problems.txt' -size +0 | sort)
+            if [ -n "$problems" ]; then
+              echo "## Compatibility problems"
+              echo
+              for file in $problems; do
+                ide=$(echo "$file" | cut -d/ -f4)
+                echo "### $ide"
+                echo '```'
+                head -c 8000 "$file"
+                echo '```'
+                echo
+              done
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
       # Always uploaded: a green week still produces the deprecation and internal-API inventory,
       # which is the early warning worth reading.
