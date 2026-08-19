@@ -16,6 +16,7 @@ import com.intellij.openapi.actionSystem.PlatformDataKeys;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.lang.properties.PropertiesFileType;
 import com.intellij.openapi.project.DumbAware;
+import com.intellij.openapi.project.DumbService;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Computable;
 import com.intellij.openapi.vfs.VirtualFile;
@@ -38,6 +39,14 @@ public class ViewMergerTreeStructureProvider implements TreeStructureProvider, D
 
     @NotNull
     public Collection<AbstractTreeNode<?>> modify(@NotNull AbstractTreeNode<?> parent, @NotNull Collection<AbstractTreeNode<?>> children, ViewSettings settings) {
+        // This provider is DumbAware, so the Project View calls it while indexing. Everything
+        // below reaches FileTypeIndex through getJahiaWorkFolderPath, which throws
+        // IndexNotReadyException in dumb mode. Leave the tree untouched until the indexes are
+        // ready; the Project View runs its providers again once they are.
+        if (DumbService.isDumb(project)) {
+            return children;
+        }
+
         if (!children.isEmpty() && parent.getValue() instanceof PsiDirectory) {
 
             //Views global virtual folder

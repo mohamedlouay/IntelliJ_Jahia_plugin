@@ -4,6 +4,9 @@ import com.intellij.openapi.fileTypes.FileType;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.roots.FileIndexFacade;
+import com.intellij.openapi.roots.ProjectRootManager;
+import com.intellij.openapi.util.Key;
+import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiElement;
@@ -11,6 +14,10 @@ import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
 import com.intellij.psi.search.FileTypeIndex;
 import com.intellij.psi.search.GlobalSearchScope;
+import com.intellij.psi.util.CachedValue;
+import com.intellij.psi.util.CachedValueProvider;
+import com.intellij.psi.util.CachedValuesManager;
+import com.intellij.psi.util.PsiModificationTracker;
 import fr.tolc.jahia.intellij.plugin.cnd.CndFileType;
 import fr.tolc.jahia.intellij.plugin.cnd.enums.ResourcesTypeEnum;
 import fr.tolc.jahia.intellij.plugin.cnd.model.NodeTypeModel;
@@ -39,32 +46,56 @@ public class CndProjectFilesUtil {
     private static final String JAHIA_6_PATH = JEE_MAIN + "/" + JAHIA_6_WEBAPP;
     private static final String JAHIA_7_PATH = JEE_MAIN + "/" + JAHIA_7_RESOURCES;
 
-    private static final Map<Module, String> JAHIA_WORK_FOLDERS_PATH_MAP = new HashMap<>();
-    
+    /**
+     * Cache key for the Jahia work folder, held by the Module itself.
+     *
+     * <p>Replaces a static {@code Map<Module, String>}: application-wide, unbounded, never
+     * invalidated and unsynchronised, it kept a strong reference to every Module ever seen --
+     * including those of closed projects -- served stale paths until the IDE was restarted, was
+     * read and written from both the EDT and background threads, and leaked entries between
+     * concurrently open projects. Holding the cache on the Module fixes all four at once: it dies
+     * with the module, CachedValuesManager handles the synchronisation, and the dependencies below
+     * recompute it when the roots or the PSI change.
+     */
+    private static final Key<CachedValue<String>> JAHIA_WORK_FOLDER = Key.create("jahia.workFolder");
+
     private CndProjectFilesUtil() {
     }
 
     @Nullable
-    public static String getJahiaWorkFolderPath(Module module) {
-        if (!JAHIA_WORK_FOLDERS_PATH_MAP.containsKey(module)) {
-            if (module != null) {
-                Collection<VirtualFile> projectCndFiles = getModuleCndFiles(module);
-                for (VirtualFile cndFile : projectCndFiles) {
-                    String path = cndFile.getPath();
-                    String jahiaWorkFolderPath = null;
-                    if (path.contains(JAHIA_6_PATH)) {
-                        jahiaWorkFolderPath = path.substring(0, path.lastIndexOf(JAHIA_6_PATH) + JAHIA_6_PATH.length());
-                    } else if (path.contains(JAHIA_7_PATH)) {
-                        jahiaWorkFolderPath = path.substring(0, path.lastIndexOf(JAHIA_7_PATH) + JAHIA_7_PATH.length());
-                    }
+    public static String getJahiaWorkFolderPath(@Nullable Module module) {
+        if (module == null || module.isDisposed()) {
+            return null;
+        }
+        return CachedValuesManager.getManager(module.getProject()).getCachedValue(
+                module,
+                JAHIA_WORK_FOLDER,
+                () -> CachedValueProvider.Result.create(
+                        computeJahiaWorkFolderPath(module),
+                        ProjectRootManager.getInstance(module.getProject()),
+                        PsiModificationTracker.MODIFICATION_COUNT),
+                false);
+    }
 
-                    if (!StringUtil.isEmptyOrSpaces(jahiaWorkFolderPath)) {
-                        JAHIA_WORK_FOLDERS_PATH_MAP.put(module, jahiaWorkFolderPath);
-                    }
-                }
+    @Nullable
+    private static String computeJahiaWorkFolderPath(@NotNull Module module) {
+        String result = null;
+        // Last match wins, and a file that yields nothing leaves the previous match standing --
+        // the behaviour of the map this replaced.
+        for (VirtualFile cndFile : getModuleCndFiles(module)) {
+            String path = cndFile.getPath();
+            String candidate = null;
+            if (path.contains(JAHIA_6_PATH)) {
+                candidate = path.substring(0, path.lastIndexOf(JAHIA_6_PATH) + JAHIA_6_PATH.length());
+            } else if (path.contains(JAHIA_7_PATH)) {
+                candidate = path.substring(0, path.lastIndexOf(JAHIA_7_PATH) + JAHIA_7_PATH.length());
+            }
+
+            if (!StringUtil.isEmptyOrSpaces(candidate)) {
+                result = candidate;
             }
         }
-        return JAHIA_WORK_FOLDERS_PATH_MAP.get(module);
+        return result;
     }
 
     @Nullable
@@ -537,6 +568,10 @@ public class CndProjectFilesUtil {
     @Nullable
     public static PsiFile getResource(Module module, ResourcesTypeEnum resourcesType, String resource) {
         String jahiaWorkFolderPath = getJahiaWorkFolderPath(module);
+        if (jahiaWorkFolderPath == null) {
+            // Otherwise the null lands in the path as the literal "null/..." folder name.
+            return null;
+        }
         File resourceFile = new File(jahiaWorkFolderPath + "/" + resourcesType.name() + "/" + resource);
         if (resourceFile.exists() && !resourceFile.isDirectory()) {
             return getPsiFileFromIoFile(module.getProject(), resourceFile);
@@ -547,9 +582,16 @@ public class CndProjectFilesUtil {
     @NotNull
     public static Map<String, PsiFile> getResources(Module module, ResourcesTypeEnum resourcesType) {
         String jahiaWorkFolderPath = getJahiaWorkFolderPath(module);
+        if (jahiaWorkFolderPath == null) {
+            // Otherwise the null lands in the path as the literal "null/..." folder name.
+            return new HashMap<>();
+        }
         File resourcesFolder = new File(jahiaWorkFolderPath + "/" + resourcesType.name());
 
-        return getFilesRecursive(module.getProject(), resourcesFolder, resourcesFolder.getAbsolutePath() + "\\");
+        // System-independent, with a "/" separator: the prefix is stripped from paths below, and a
+        // hard-coded "\\" matched nothing on Linux and macOS, silently returning no resource at all.
+        return getFilesRecursive(module.getProject(), resourcesFolder,
+                FileUtil.toSystemIndependentName(resourcesFolder.getAbsolutePath()) + "/");
     }
 
     @NotNull
@@ -567,9 +609,10 @@ public class CndProjectFilesUtil {
             } else {
                 // StringUtil.substringAfter returns null when the separator is absent,
                 // where commons-lang returned "". Guard against the NPE that would follow.
-                String relativePath = StringUtil.substringAfter(file.getAbsolutePath(), relativeToFolder);
+                String path = FileUtil.toSystemIndependentName(file.getAbsolutePath());
+                String relativePath = StringUtil.substringAfter(path, relativeToFolder);
                 if (relativePath != null) {
-                    res.put(relativePath.replace("\\", "/"), getPsiFileFromIoFile(project, file));
+                    res.put(relativePath, getPsiFileFromIoFile(project, file));
                 }
             }
         }
