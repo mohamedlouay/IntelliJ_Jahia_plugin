@@ -1,0 +1,5 @@
+[jnt:subNodes]
+	+* (scp:documentMultiple) = scp:documentMultiple
+	+* (nt:base) = nt:base
+	+ subNode (jnt:content, jnt:file) = jnt:content mandatory autocreated
+	+* (jnt:content) multiple version

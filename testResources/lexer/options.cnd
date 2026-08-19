@@ -1,0 +1,5 @@
+[jmix:options] mixin
+    itemtype = options
+    - picker (weakreference, picker[type='image'])
+    - bundled (string, choicelist[resourceBundle]) indexed=no mandatory < wideScreenOnly, smallScreenOnly
+    - templates (string, choicelist[templates=scp:videoItem,resourceBundle,image]) nofulltext itemtype = layout

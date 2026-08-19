@@ -1,0 +1,6 @@
+[jnt:constraints]
+ - simple (string) < 'abc', 'def'
+ - escapedQuotes (string) copy multiple < 'abc', 'def', 'g\'hi', 'J\'arrive'
+ - functionCall (string) < skins()
+ - resourceKeys (string) < resourceKey(left), resourceKey(right), resourceKey(default)
+ - unquoted (string) < name,desc,date

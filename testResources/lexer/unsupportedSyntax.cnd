@@ -1,0 +1,4 @@
+[jnt:unsupported]
+	+ '*' (jnt:content) = jnt:content
+	- signs (string, choicelist[resourceBundle]) < +,-
+	sharedSmallText skin (choicelist[image]) indexed=no < skins()

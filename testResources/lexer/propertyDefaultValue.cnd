@@ -1,0 +1,7 @@
+[jnt:defaults]
+ - parenInQuotes (string) = '100% (gfdg)' i18n
+ - unquotedPercent (string) = 100% i18n
+ - escapedQuote (string) = 'J\'arrive'
+ - currentUser (string) = currentUser()
+ - number (long) = 5 indexed=no
+ - resourceKeyDefault (string, choicelist) = resourceKey(left) indexed=no
