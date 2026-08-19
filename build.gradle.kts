@@ -135,11 +135,19 @@ intellijPlatform {
         // Without this the verifier reports INVALID_PLUGIN and schedules 0 verifications,
         // so no compatibility check runs at all.
         freeArgs = listOf("-mute", "TemplateWordInPluginId")
+
+        // -PverifyRecommended switches to the latest releases and EAPs, which is what the weekly
+        // compatibility workflow runs. Every other build checks the one version this plugin
+        // compiles against, so a normal push is not held hostage to an EAP breaking overnight.
         ides {
-            create(
-                IntelliJPlatformType.IntellijIdeaUltimate,
-                providers.gradleProperty("platformVersion").get(),
-            )
+            if (providers.gradleProperty("verifyRecommended").isPresent) {
+                recommended()
+            } else {
+                create(
+                    IntelliJPlatformType.IntellijIdeaUltimate,
+                    providers.gradleProperty("platformVersion").get(),
+                )
+            }
         }
     }
 }

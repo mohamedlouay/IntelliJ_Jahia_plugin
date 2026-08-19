@@ -1,0 +1,65 @@
+name: Compatibility
+
+# The point of this workflow, and the reason it matters more than the build one.
+#
+# This plugin died in silence. Between February 2023 and the 2025.1 migration the platform
+# removed WriteCommandAction.Simple, dropped commons-lang 2 and made RegisterToolWindowTask
+# internal, and nothing ever said so. Three internal APIs are still used deliberately, for want
+# of any public replacement:
+#
+#   JspELResolveUtil / VariableInfoData    CndJspElVariablesProvider   JSP EL completion
+#   PropertyKeyImpl                        CndReferenceProvider et al. translations, NOT optional
+#   PsiDirectoryNode / PsiFileNode         ViewNode, ViewsFolderNode   view grouping in Project View
+#
+# Running the verifier weekly against the latest releases and EAPs is the mitigation: it surfaces
+# a rename while it is still an EAP, rather than when a user updates their IDE.
+
+on:
+  schedule:
+    # Mondays, 05:17 UTC. Off the hour on purpose: scheduled jobs queue behind everyone else's
+    # cron at :00, and GitHub drops runs it cannot schedule.
+    - cron: '17 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compatibility:
+    name: Verify against recommended IDEs
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: 21
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Cache Plugin Verifier IDEs
+        uses: actions/cache@v4
+        with:
+          path: ~/.pluginVerifier/ides
+          key: plugin-verifier-recommended-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: plugin-verifier-recommended-${{ runner.os }}-
+
+      # -PverifyRecommended swaps the single pinned IDE for ides { recommended() }:
+      # the latest releases and the EAPs.
+      - name: Run Plugin Verifier against recommended IDEs
+        run: ./gradlew verifyPlugin -PverifyRecommended
+
+      # Always uploaded: a green week still produces the deprecation and internal-API inventory,
+      # which is the early warning worth reading.
+      - name: Upload Plugin Verifier report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: plugin-verifier-report-recommended
+          path: build/reports/pluginVerifier/
+          if-no-files-found: error
+          retention-days: 90
