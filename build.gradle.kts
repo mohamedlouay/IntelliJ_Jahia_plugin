@@ -152,6 +152,8 @@ intellijPlatform {
         ides {
             if (providers.gradleProperty("verifyRecommended").isPresent) {
                 recommended()
+            } else if (providers.gradleProperty("verifyIde").isPresent) {
+                create(IntelliJPlatformType.IntellijIdeaUltimate, providers.gradleProperty("verifyIde").get())
             } else {
                 create(
                     IntelliJPlatformType.IntellijIdeaUltimate,
