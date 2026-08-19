@@ -118,7 +118,17 @@ intellijPlatform {
         ).asText
         ideaVersion {
             sinceBuild = providers.gradleProperty("pluginSinceBuild")
-            untilBuild = providers.gradleProperty("pluginUntilBuild")
+
+            // No upper bound, which is the JetBrains recommendation for 2024.3+ (build 243+) and
+            // what verifyPluginProjectConfiguration asks for on every build.
+            //
+            // It is also what makes the weekly compatibility job worth running. ides { recommended() }
+            // is not merely filtered by this range, it is derived from it: measured with
+            // printProductsReleases, untilBuild = 252.* selected IU-2025.2 and IU-2025.1 -- two IDEs
+            // the ordinary build already covers -- while an open range selects IU-2026.2, IU-2026.1
+            // and IU-2025.3 as well. A ceiling here does not make the job fail; it makes it pass
+            // while checking nothing new, which is worse, because it is silent.
+            untilBuild = provider { null }
         }
     }
 
