@@ -2,149 +2,67 @@ package fr.tolc.jahia.intellij.plugin.cnd.components;
 
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
-import com.intellij.openapi.module.Module;
-import com.intellij.openapi.project.DumbService;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.roots.ModifiableRootModel;
-import com.intellij.openapi.roots.ModuleRootManager;
-import com.intellij.openapi.roots.OrderRootType;
-import com.intellij.openapi.roots.ProjectRootManager;
-import com.intellij.openapi.roots.libraries.Library;
-import com.intellij.openapi.roots.libraries.LibraryTable;
-import com.intellij.openapi.startup.StartupActivity;
+import com.intellij.openapi.roots.AdditionalLibraryRootsListener;
+import com.intellij.openapi.startup.ProjectActivity;
 import com.intellij.openapi.vfs.VirtualFile;
-import com.intellij.util.indexing.FileBasedIndex;
-import fr.tolc.jahia.intellij.plugin.cnd.toolWindow.JahiaTreeStructure;
-import fr.tolc.jahia.intellij.plugin.cnd.utils.CndPluginUtil;
-import fr.tolc.jahia.intellij.plugin.cnd.utils.CndProjectFilesUtil;
+import fr.tolc.jahia.intellij.plugin.cnd.roots.JahiaBundledCndService;
+import kotlin.Unit;
+import kotlin.coroutines.Continuation;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.io.IOException;
+import java.util.Collections;
 
-public class CndStartupActivity implements StartupActivity {
+/**
+ * Triggers the extraction of the bundled Jahia definitions when a project opens.
+ *
+ * <p>Everything else this class used to do is gone: it generated a jar inside the plugin
+ * installation directory, then attached it -- plus the completion jars -- as module libraries from
+ * a write action on the EDT, leaking a {@code ModifiableRootModel} on every subsequent project
+ * open and mutating the user's module model. The roots now come from
+ * {@code JahiaBundledCndRootsProvider}, which owns none of those problems.
+ */
+public final class CndStartupActivity implements ProjectActivity {
     private static final Logger logger = Logger.getInstance(CndStartupActivity.class);
 
-    private static final String JAHIA_PLUGIN_SUBFOLDER = "jahia";
-    private static final String JAHIA_CND_JAR_NAME = "jahia-plugin-cnds.jar";
-
-    private static final String JAHIA_PLUGIN_CND_LIBRARY_NAME = "jahia-plugin-base-cnd-files";
-    private static final String JAHIA_PLUGIN_LIBRARY_NAME = "jahia-plugin-completion-library";
-    private static final String JAHIA_COMPLETION_JAR = JAHIA_PLUGIN_LIBRARY_NAME + ".jar";
-    private static final String JAHIA_COMPLETION_SOURCES = JAHIA_PLUGIN_LIBRARY_NAME + "-sources.jar";
-
-    private static boolean cndJarGenerationDone = false;
-
+    /**
+     * {@code ProjectActivity.execute} is a Kotlin suspend function; from Java it is implemented as
+     * a method taking a {@link Continuation} and returning {@code Unit}. That compiles against the
+     * platform's own kotlin-stdlib -- cheaper than adding the Kotlin plugin for a single class in
+     * an otherwise all-Java project.
+     */
     @Override
-    public void runActivity(@NotNull Project project) {
-        logger.info("Project " + project.getName() + " started");
+    public @Nullable Object execute(@NotNull Project project, @NotNull Continuation<? super Unit> continuation) {
+        JahiaBundledCndService service = JahiaBundledCndService.getInstance();
+        boolean alreadyReady = service.getCndRootIfReady() != null;
 
-        if (!cndJarGenerationDone) {
-            logger.info("CND jar generation started");
-            File jahiaPluginSubFolder = CndPluginUtil.getPluginFile(JAHIA_PLUGIN_SUBFOLDER);
-            if (jahiaPluginSubFolder != null && jahiaPluginSubFolder.exists() && jahiaPluginSubFolder.isDirectory()) {
-                File jarFile = CndPluginUtil.getPluginFile(JAHIA_PLUGIN_SUBFOLDER + "/" + JAHIA_CND_JAR_NAME);
-                if (jarFile != null && jarFile.exists()) {
-                    jarFile.delete();
-                }
-                try {
-                    CndPluginUtil.fileToJar(jahiaPluginSubFolder, jahiaPluginSubFolder.getAbsolutePath() + "/" + JAHIA_CND_JAR_NAME, "cnd");
-                    cndJarGenerationDone = true;
-                } catch (Exception e) {
-                    logger.warn("Error generating Jahia base cnd files 'fake' jar", e);
-                }
-            }
+        try {
+            service.ensureExtracted();
+        } catch (IOException e) {
+            // Degrade gracefully: without the bundled folder the base Jahia nodetypes are simply
+            // unavailable, which is not worth failing project startup over.
+            logger.warn("Could not extract the bundled Jahia CND definitions; base nodetypes will be unavailable", e);
+            return Unit.INSTANCE;
         }
 
+        VirtualFile root = service.getCndRootIfReady();
+        if (root != null && !alreadyReady) {
+            // The provider was queried before the extraction finished, so it returned nothing.
+            // The roots that just appeared have to be announced, or they stay unindexed until the
+            // next project open.
+            ApplicationManager.getApplication().invokeLater(
+                    () -> ApplicationManager.getApplication().runWriteAction(
+                            () -> AdditionalLibraryRootsListener.fireAdditionalLibraryChanged(
+                                    project,
+                                    JahiaBundledCndService.LIBRARY_NAME,
+                                    Collections.emptyList(),
+                                    Collections.singletonList(root),
+                                    "jahia-bundled-cnd")),
+                    project.getDisposed());
+        }
 
-        ApplicationManager.getApplication().invokeLater(() -> ApplicationManager.getApplication().runWriteAction(() -> {
-            File jahiaPluginSubFolder = CndPluginUtil.getPluginFile(JAHIA_PLUGIN_SUBFOLDER);
-            if (jahiaPluginSubFolder != null && jahiaPluginSubFolder.exists() && jahiaPluginSubFolder.isDirectory()) {
-                Collection<VirtualFile> virtualFiles = CndProjectFilesUtil.getProjectCndFiles(project);
-
-                //Add jars to the modules libraries
-                Set<Module> alreadyDoneModules = new HashSet<>();
-                for (VirtualFile virtualFile : virtualFiles) {
-                    try {
-                        Module fileModule = ProjectRootManager.getInstance(project).getFileIndex().getModuleForFile(virtualFile);
-
-                        if (fileModule != null && !alreadyDoneModules.contains(fileModule)) {
-                            final ModifiableRootModel rootModel = ModuleRootManager.getInstance(fileModule).getModifiableModel();
-                            LibraryTable.ModifiableModel moduleLibraryTable = rootModel.getModuleLibraryTable().getModifiableModel();
-                            List<File> toReindex = new ArrayList<>();
-
-                            //CND jar
-                            Library library = moduleLibraryTable.getLibraryByName(JAHIA_PLUGIN_CND_LIBRARY_NAME);
-                            if (library == null) {
-//                                            moduleLibraryTable.removeLibrary(library);
-                                Library newLibrary = moduleLibraryTable.createLibrary(JAHIA_PLUGIN_CND_LIBRARY_NAME);
-
-                                File libraryJar = new File(jahiaPluginSubFolder.getAbsolutePath() + "/" + JAHIA_CND_JAR_NAME);
-                                toReindex.add(libraryJar);
-                                Library.ModifiableModel modifiableModel = newLibrary.getModifiableModel();
-                                modifiableModel.addRoot("jar://" + libraryJar.getAbsolutePath() + "!/", OrderRootType.CLASSES);
-                                modifiableModel.commit();
-                            }
-
-                            //Classes jar
-                            Library completionLibrary = moduleLibraryTable.getLibraryByName(JAHIA_PLUGIN_LIBRARY_NAME);
-                            if (completionLibrary == null) {
-//                                            moduleLibraryTable.removeLibrary(completionLibrary);
-                                Library newCompletionLibrary = moduleLibraryTable.createLibrary(JAHIA_PLUGIN_LIBRARY_NAME);
-
-                                File completionLibraryJar = new File(jahiaPluginSubFolder.getAbsolutePath() + "/" + JAHIA_COMPLETION_JAR);
-                                File completionLibrarySources = new File(jahiaPluginSubFolder.getAbsolutePath() + "/" + JAHIA_COMPLETION_SOURCES);
-                                toReindex.add(completionLibraryJar);
-                                toReindex.add(completionLibrarySources);
-                                Library.ModifiableModel completionModifiableModel = newCompletionLibrary.getModifiableModel();
-                                completionModifiableModel.addRoot("jar://" + completionLibraryJar.getAbsolutePath() + "!/", OrderRootType.CLASSES);
-                                completionModifiableModel.addRoot("jar://" + completionLibrarySources.getAbsolutePath() + "!/", OrderRootType.SOURCES);
-                                completionModifiableModel.commit();
-                            }
-
-
-                            if (!toReindex.isEmpty()) {
-                                //Commit the module config
-                                moduleLibraryTable.commit();
-                                rootModel.commit();
-
-                                //Reindex
-                                for (File fileReindex : toReindex) {
-                                    try {
-                                        VirtualFile virtualFileReindex = CndProjectFilesUtil.getVirtualFileFromIoFile(fileReindex);
-                                        if (virtualFileReindex != null) {
-                                            FileBasedIndex.getInstance().requestReindex(virtualFileReindex);
-                                        }
-                                    } catch (Exception e) {
-                                        logger.warn("Error reindexing file [" + fileReindex.getAbsolutePath() + "]", e);
-                                    }
-                                }
-                            }
-
-                            alreadyDoneModules.add(fileModule);
-                        }
-                    } catch (Exception e) {
-                        logger.warn("Error adding Jahia CND jars to module(s) libraries", e);
-                    }
-                }
-
-                //Tool window
-                if (!virtualFiles.isEmpty()) {
-                    DumbService.getInstance(project).smartInvokeLater(() -> {
-                        new JahiaTreeStructure(project);
-                    });
-                }
-            } else {
-                // Was throwing org.jetbrains.java.generate.exception.PluginException -- an internal
-                // class of the Java plugin's generate-toString subsystem -- from inside a write
-                // action at project open. Degrade gracefully instead: without the bundled folder the
-                // base Jahia nodetypes are simply unavailable, which is not worth killing startup.
-                logger.warn("Jahia plugin resources folder not found; base CND nodetypes will be unavailable");
-            }
-        }));
+        return Unit.INSTANCE;
     }
 }

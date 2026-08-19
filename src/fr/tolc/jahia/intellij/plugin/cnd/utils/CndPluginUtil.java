@@ -13,8 +13,6 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Enumeration;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
-import java.util.jar.JarOutputStream;
-import java.util.zip.ZipEntry;
 
 import com.intellij.ide.plugins.IdeaPluginDescriptor;
 import com.intellij.ide.plugins.PluginManagerCore;
@@ -22,8 +20,6 @@ import com.intellij.openapi.extensions.PluginId;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.module.ModuleManager;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.util.io.FileUtil;
-import com.intellij.util.ArrayUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -98,46 +94,6 @@ public class CndPluginUtil {
         return null;
     }
 
-    public static void fileToJar(File rootFile, String jarPath, String... extensions) throws IOException {
-        FileOutputStream fout = new FileOutputStream(jarPath);
-        JarOutputStream jarOut = new JarOutputStream(fout);
-        addFileToJarRecursive(jarOut, rootFile, rootFile, extensions);
-        jarOut.close();
-        fout.close();
-    }
-
-    private static void addFileToJarRecursive(JarOutputStream jarOut, File file, File rootFile, String... extensions) throws IOException {
-        if (file.isDirectory()) {
-            if (!FileUtil.filesEqual(file, rootFile)) {
-                jarOut.putNextEntry(new ZipEntry(getRelativePath(rootFile, file) + "/"));
-            }
-            File[] children = file.listFiles();
-            if (children != null) {
-                for (File child : children) {
-                    addFileToJarRecursive(jarOut, child, rootFile, extensions);
-                }
-            }
-        } else {
-            String entryName;
-            if (FileUtil.filesEqual(file, rootFile)) {
-                entryName = file.getName();
-            } else {
-                entryName = getRelativePath(rootFile, file);
-            }
-
-            String[] split = entryName.split("\\.");
-            if (ArrayUtil.contains(split[split.length - 1], extensions)) {
-                jarOut.putNextEntry(new ZipEntry(entryName));
-                jarOut.write(Files.readAllBytes(Paths.get(file.getAbsolutePath())));
-                jarOut.closeEntry();
-            }
-        }
-    }
-
-    private static String getRelativePath(File parent, File child) {
-        return child.getAbsolutePath().substring(parent.getAbsolutePath().length() + 1);
-    }
-    
     public static void extractJarToFolder(File jar, File destFolder, String... ignoreFiles) {
         JarFile jarFile = null;
         FileOutputStream fos = null;

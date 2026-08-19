@@ -48,6 +48,12 @@
 
     <postStartupActivity implementation="fr.tolc.jahia.intellij.plugin.cnd.components.CndStartupActivity"/>
 
+    <!-- Puts the 45 bundled Jahia .cnd files in the project's library scope, so they are indexed
+         and reachable through GlobalSearchScope.allScope. Replaces the module libraries the
+         plugin used to create by hand, which mutated the user's module model. -->
+    <additionalLibraryRootsProvider
+        implementation="fr.tolc.jahia.intellij.plugin.cnd.roots.JahiaBundledCndRootsProvider"/>
+
     <!-- CND -->
     <!-- 'name' MUST match CndFileType.getName() exactly. A mismatch registers the file
          type twice under two names, and FileTypeIndex.getFiles(CndFileType.INSTANCE, ...)

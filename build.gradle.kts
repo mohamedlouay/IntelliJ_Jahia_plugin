@@ -76,6 +76,37 @@ sourceSets {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Manifest of the bundled Jahia .cnd files, read at runtime by JahiaBundledCndService
+// to know what to extract. Generated rather than discovered by walking jar entries at
+// runtime: enumerating a jar depends on how the plugin happens to be installed, whereas a
+// generated list is deterministic and fails loudly at build time when it comes out empty.
+// ---------------------------------------------------------------------------
+val bundledCndFolder = layout.projectDirectory.dir("resources/jahia")
+
+val generateCndIndex = tasks.register("generateCndIndex") {
+    val source = bundledCndFolder
+    val target = layout.buildDirectory.file("generated/bundled-cnd/index.txt")
+    inputs.dir(source).withPropertyName("bundledCndFiles")
+    outputs.file(target).withPropertyName("cndIndex")
+
+    doLast {
+        val names = source.asFile.listFiles().orEmpty()
+            .filter { it.isFile && it.name.endsWith(".cnd") }
+            .map { it.name }
+            .sorted()
+        require(names.isNotEmpty()) { "No .cnd file found in ${source.asFile}" }
+        target.get().asFile.apply {
+            parentFile.mkdirs()
+            writeText(names.joinToString(separator = "\n", postfix = "\n"))
+        }
+    }
+}
+
+tasks.processResources {
+    from(generateCndIndex) { into("jahia") }
+}
+
 intellijPlatform {
     instrumentCode = true // GUI Designer .form binding + @NotNull assertions
     buildSearchableOptions = false // the plugin contributes no settings UI
