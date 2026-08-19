@@ -7,23 +7,20 @@ import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.CommonDataKeys;
 import org.jetbrains.annotations.NotNull;
 import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.editor.CaretModel;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.pom.Navigatable;
 import com.intellij.psi.PsiManager;
 import com.intellij.util.IncorrectOperationException;
 import fr.tolc.jahia.intellij.plugin.cnd.dialogs.CreateCndFileDialog;
-import fr.tolc.jahia.intellij.plugin.cnd.utils.CndPluginUtil;
+import fr.tolc.jahia.intellij.plugin.cnd.utils.CndFileTemplateUtil;
 import fr.tolc.jahia.intellij.plugin.cnd.utils.CndProjectFilesUtil;
 import com.intellij.openapi.util.text.StringUtil;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 public class NewCndFileAction extends AnAction {
 
@@ -50,7 +47,12 @@ public class NewCndFileAction extends AnAction {
                         Project project = e.getProject();
                         VirtualFile virtualFile = e.getData(CommonDataKeys.VIRTUAL_FILE);
                         if (virtualFile != null && project != null) {
-                            createCndFile(project, virtualFile.getCanonicalPath(), fileName);
+                            // The action can be invoked on a file as well as on a folder; the new
+                            // .cnd belongs next to it either way.
+                            VirtualFile directory = virtualFile.isDirectory() ? virtualFile : virtualFile.getParent();
+                            if (directory != null) {
+                                createCndFile(project, directory, fileName);
+                            }
                         }
                     }
                 }
@@ -72,30 +74,24 @@ public class NewCndFileAction extends AnAction {
         e.getPresentation().setEnabledAndVisible(showAction);
     }
 
-    private void createCndFile(final Project project, final String directory, final String cndFileName) {
-        File folder = new File(directory);
-        if(!folder.exists() || !folder.isDirectory()) {
-            folder.mkdirs();
-        }
-        VirtualFile virtualFolder = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(folder);
+    private void createCndFile(final Project project, final VirtualFile directory, final String cndFileName) {
+        final String realFileName = cndFileName.endsWith(".cnd") ? cndFileName : cndFileName + ".cnd";
 
-        String realFileName = cndFileName;
-        if (!realFileName.endsWith(".cnd"))
-            realFileName += ".cnd";
-        File cndFile = new File(virtualFolder.getCanonicalPath(), realFileName);
-
-        //Copying default cnd file to create the new file
+        // Created through the VFS inside a write action, from the template bundled in the jar.
+        // The previous mkdirs + synchronous refresh + Files.copy went behind the IDE's back: the
+        // file only became visible at the next refresh.
+        final VirtualFile cndVirtualFile;
         try {
-            if (!cndFile.exists()) {
-                Path defaultCndFilePath = CndPluginUtil.getPluginFilePath("default/cnd-file.cnd");
-                Files.copy(defaultCndFilePath, cndFile.toPath());
-            }
+            cndVirtualFile = WriteCommandAction.writeCommandAction(project)
+                    .withName("Create CND File")
+                    .compute(() -> CndFileTemplateUtil.createIfMissing(
+                            this, directory, realFileName,
+                            CndFileTemplateUtil.read(CndFileTemplateUtil.CND_FILE)));
         } catch (IOException e) {
             throw new IncorrectOperationException(e);
         }
 
         //Open new file in editor
-        VirtualFile cndVirtualFile = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(cndFile);
         FileEditorManager.getInstance(project).openFile(cndVirtualFile, true);
 
         //Expand folder in Project view

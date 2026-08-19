@@ -15,7 +15,7 @@ import javax.swing.*;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.wm.WindowManager;
-import fr.tolc.jahia.intellij.plugin.cnd.utils.CndPluginUtil;
+import fr.tolc.jahia.intellij.plugin.cnd.utils.CndProjectFilesUtil;
 
 public class CreateNodeTypeViewDialog extends JDialog {
     private JPanel contentPane;
@@ -37,7 +37,7 @@ public class CreateNodeTypeViewDialog extends JDialog {
         getRootPane().setDefaultButton(buttonOK);
 
         this.module = module;
-        Module[] projectModules = CndPluginUtil.getProjectModules(project);
+        Module[] projectModules = CndProjectFilesUtil.getProjectModules(project);
         if (projectModules.length >= 2) {
             List<Module> modulesSorted = Arrays.asList(projectModules);
             modulesSorted.sort(Comparator.comparing(Module::getName));

@@ -2,6 +2,7 @@ package fr.tolc.jahia.intellij.plugin.cnd.utils;
 
 import com.intellij.openapi.fileTypes.FileType;
 import com.intellij.openapi.module.Module;
+import com.intellij.openapi.module.ModuleManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.roots.FileIndexFacade;
 import com.intellij.openapi.roots.ProjectRootManager;
@@ -60,6 +61,11 @@ public class CndProjectFilesUtil {
     private static final Key<CachedValue<String>> JAHIA_WORK_FOLDER = Key.create("jahia.workFolder");
 
     private CndProjectFilesUtil() {
+    }
+
+    @NotNull
+    public static Module[] getProjectModules(Project project) {
+        return ModuleManager.getInstance(project).getModules();
     }
 
     @Nullable
@@ -184,7 +190,7 @@ public class CndProjectFilesUtil {
     @NotNull
     public static List<ViewModel> getNodeTypeViews(Project project, String namespace, String nodeTypeName, String templateType) {
         List<ViewModel> res = new ArrayList<>();
-        for (Module module : CndPluginUtil.getProjectModules(project)) {
+        for (Module module : CndProjectFilesUtil.getProjectModules(project)) {
             String nodeTypeFolderPath = getNodeTypeFolderPath(getJahiaWorkFolderPath(module), namespace, nodeTypeName);
             List<ViewModel> nodeTypeViews = getNodeTypeViews(nodeTypeFolderPath, namespace, nodeTypeName);
             for (ViewModel nodeTypeView : nodeTypeViews) {
@@ -281,7 +287,7 @@ public class CndProjectFilesUtil {
         List<ViewModel> res = new ArrayList<>();
         List<CndNodeType> nodeTypes = CndUtil.findNodeTypes(project);
         for (CndNodeType nodeType : nodeTypes) {
-            for (Module module : CndPluginUtil.getProjectModules(project)) {
+            for (Module module : CndProjectFilesUtil.getProjectModules(project)) {
                 String namespace = nodeType.getNodeTypeNamespace();
                 String nodeTypeName = nodeType.getNodeTypeName();
                 String nodeTypeFolderPath = getNodeTypeFolderPath(getJahiaWorkFolderPath(module), namespace, nodeTypeName);
@@ -314,7 +320,7 @@ public class CndProjectFilesUtil {
     @NotNull
     public static List<PsiFile> findViewFiles(Project project, String namespace, String nodeTypeName, String viewType, String viewName) {
         List<PsiFile> res = new ArrayList<PsiFile>();
-        for (Module module : CndPluginUtil.getProjectModules(project)) {
+        for (Module module : CndProjectFilesUtil.getProjectModules(project)) {
             res.addAll(findViewFiles(module, namespace, nodeTypeName, viewType, viewName));
         }
         return res;
@@ -360,7 +366,7 @@ public class CndProjectFilesUtil {
     public static List<PsiFile> findViewFiles(CndNodeType element, String viewType, String viewName) {
         List<PsiFile> res = new ArrayList<PsiFile>();
         if (element != null) {
-            for (Module module : CndPluginUtil.getProjectModules(element.getProject())) {
+            for (Module module : CndProjectFilesUtil.getProjectModules(element.getProject())) {
                 res.addAll(findViewFiles(module, element, viewType, viewName));
             }
         }
@@ -387,7 +393,7 @@ public class CndProjectFilesUtil {
     @NotNull
     public static List<PsiFile> findViewFiles(Project project, ViewModel viewModel) {
         List<PsiFile> res = new ArrayList<PsiFile>();
-        for (Module module : CndPluginUtil.getProjectModules(project)) {
+        for (Module module : CndProjectFilesUtil.getProjectModules(project)) {
             res.addAll(findViewFiles(module, viewModel));
         }
         return res;

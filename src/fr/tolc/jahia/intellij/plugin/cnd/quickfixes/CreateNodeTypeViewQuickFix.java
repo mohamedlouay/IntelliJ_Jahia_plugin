@@ -3,14 +3,16 @@ package fr.tolc.jahia.intellij.plugin.cnd.quickfixes;
 import com.intellij.codeInsight.intention.impl.BaseIntentionAction;
 import com.intellij.ide.projectView.ProjectView;
 import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.editor.CaretModel;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.vfs.LocalFileSystem;
+import com.intellij.openapi.vfs.VfsUtil;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.pom.Navigatable;
+import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
 import com.intellij.util.IncorrectOperationException;
@@ -21,17 +23,13 @@ import fr.tolc.jahia.intellij.plugin.cnd.psi.CndNodeType;
 import fr.tolc.jahia.intellij.plugin.cnd.psi.CndProperty;
 import fr.tolc.jahia.intellij.plugin.cnd.psi.CndSubNode;
 import fr.tolc.jahia.intellij.plugin.cnd.psi.CndSubNodeType;
-import fr.tolc.jahia.intellij.plugin.cnd.utils.CndPluginUtil;
+import fr.tolc.jahia.intellij.plugin.cnd.utils.CndFileTemplateUtil;
 import fr.tolc.jahia.intellij.plugin.cnd.utils.CndProjectFilesUtil;
 import com.intellij.openapi.util.text.StringUtil;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.Set;
 
@@ -96,52 +94,71 @@ public class CreateNodeTypeViewQuickFix extends BaseIntentionAction {
     }
     
     private void createNodeTypeView(final Project project, final String directory, final String viewFileName, final String propertiesFileName) {
-        File folder = new File(directory);
-        if(!folder.exists() || !folder.isDirectory()) {
-            folder.mkdirs();
-        }
-        VirtualFile nodeTypeFolder = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(folder);
-
-        File viewFile = new File(nodeTypeFolder.getCanonicalPath(), viewFileName);
-        File properties = new File(nodeTypeFolder.getCanonicalPath(), propertiesFileName);
-
-        //Copying default content files to create the new files
+        // A JSP view starts from the bundled template plus the accessors generated for this node
+        // type. Any other language starts empty -- which is what copying the bundled
+        // default/view.default did, that file being 0 bytes.
+        final byte[] viewContent;
         try {
-            if (!viewFile.exists()) {
-                Path defaultViewPath;
-                if (viewFileName.endsWith(".jsp")) {
-                    defaultViewPath = CndPluginUtil.getPluginFilePath("default/view.jsp");
-                } else {
-                    defaultViewPath = CndPluginUtil.getPluginFilePath("default/view.default");
-                }
-                Files.copy(defaultViewPath, viewFile.toPath());
-                
-                if (viewFileName.endsWith(".jsp")) {
-                    appendAvailableResources(viewFile);
-                }
-            }
-
-            if (!properties.exists()) {
-                Path defaultPropertiesPath = CndPluginUtil.getPluginFilePath("default/view.properties");
-                Files.copy(defaultPropertiesPath, properties.toPath());
-            }
+            viewContent = viewFileName.endsWith(".jsp")
+                    ? CndFileTemplateUtil.append(CndFileTemplateUtil.read(CndFileTemplateUtil.VIEW_JSP), availableResources())
+                    : new byte[0];
         } catch (IOException e) {
             throw new IncorrectOperationException(e);
         }
 
+        // Folder and files go through the VFS inside a write action, so the IDE sees them at once.
+        // The previous mkdirs + synchronous refresh + Files.copy left them invisible until the
+        // next refresh.
+        final VirtualFile[] created = new VirtualFile[2];
+        try {
+            WriteCommandAction.writeCommandAction(project)
+                    .withName("Create Node Type View")
+                    .run(() -> {
+                        VirtualFile nodeTypeFolder = VfsUtil.createDirectoryIfMissing(directory);
+                        if (nodeTypeFolder == null) {
+                            throw new IOException("Could not create the view folder: " + directory);
+                        }
+                        created[0] = CndFileTemplateUtil.createIfMissing(this, nodeTypeFolder, viewFileName, viewContent);
+                        created[1] = CndFileTemplateUtil.createIfMissing(this, nodeTypeFolder, propertiesFileName,
+                                CndFileTemplateUtil.read(CndFileTemplateUtil.VIEW_PROPERTIES));
+                    });
+        } catch (IOException e) {
+            throw new IncorrectOperationException(e);
+        }
+
+        VirtualFile viewVirtualFile = created[0];
+
         //Open new files in editor
-        VirtualFile propertiesFile = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(properties);
-        FileEditorManager.getInstance(project).openFile(propertiesFile, false);
-        
-        VirtualFile viewVirtualFile = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(viewFile);
+        FileEditorManager.getInstance(project).openFile(created[1], false);
         FileEditorManager.getInstance(project).openFile(viewVirtualFile, true);
 
         //Expand folder in Project view
         ProjectView.getInstance(project).select(null, viewVirtualFile, false);
 
         //Caret at the end of the file
-        ((Navigatable) PsiManager.getInstance(project).findFile(viewVirtualFile).getLastChild().getLastChild().getLastChild().getNavigationElement()).navigate(true);
-        CaretModel caretModel = FileEditorManager.getInstance(project).getSelectedTextEditor().getCaretModel();
+        moveCaretToEnd(project, viewVirtualFile);
+    }
+
+    /**
+     * Walks down the last child three levels deep, which is where the bundled JSP template puts
+     * its editable body. A non-JSP view is created empty, so there is nothing to walk and nothing
+     * to place -- hence the guards, where the chained calls used to throw NPE.
+     */
+    private static void moveCaretToEnd(Project project, VirtualFile viewVirtualFile) {
+        PsiFile psiFile = PsiManager.getInstance(project).findFile(viewVirtualFile);
+        PsiElement target = psiFile;
+        for (int depth = 0; depth < 3 && target != null; depth++) {
+            target = target.getLastChild();
+        }
+        if (target instanceof Navigatable) {
+            ((Navigatable) target.getNavigationElement()).navigate(true);
+        }
+
+        Editor editor = FileEditorManager.getInstance(project).getSelectedTextEditor();
+        if (editor == null) {
+            return;
+        }
+        CaretModel caretModel = editor.getCaretModel();
         caretModel.moveCaretRelatively(-caretModel.getLogicalPosition().column, 2, false, false, false);
     }
 
@@ -159,7 +176,8 @@ public class CreateNodeTypeViewQuickFix extends BaseIntentionAction {
     private static final String PROPERTY_LOOP_TEMPLATE  = "<c:forEach items=\"${" + VAR_NAME + "}\" var=\"item\">\r\n\t${item." + ACCESSOR + "}\r\n</c:forEach>\r\n";
     private static final String SUBNODE_LOOP_TEMPLATE  = "<c:forEach items=\"${" + VAR_NAME + "}\" var=\"node\">\r\n\t<template:module node=\"${node}\"/>\r\n</c:forEach>\r\n";
 
-    private void appendAvailableResources(File viewFile) throws IOException {
+    /** Builds the accessors and loops generated for this node type, appended to the JSP template. */
+    private String availableResources() {
         StringBuilder toAppend = new StringBuilder();
         StringBuilder toAppendLoops = new StringBuilder();
         
@@ -217,7 +235,7 @@ public class CreateNodeTypeViewQuickFix extends BaseIntentionAction {
         }
         
         toAppend.append("\r\n");
-        Files.write(viewFile.toPath(), toAppend.toString().getBytes(), StandardOpenOption.APPEND);
+        return toAppend.toString();
     }
     
     private String convertToVariableName(String propertyName) {
