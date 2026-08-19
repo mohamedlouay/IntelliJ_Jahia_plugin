@@ -20,6 +20,13 @@ on:
     # cron at :00, and GitHub drops runs it cannot schedule.
     - cron: '17 5 * * 1'
   workflow_dispatch:
+  # TEMPORARY, remove after the measurement. workflow_dispatch only offers a "Run workflow" button
+  # for workflows that exist on the default branch, and this file is not on master yet, so there is
+  # no other way to make this job run once. It is needed to settle whether the Plugin Verifier hard
+  # fails or merely reports "incompatible" for IDEs outside the until-build range -- the fact the
+  # until-build decision hangs on.
+  push:
+    branches: [feat/gradle-build-2025]
 
 permissions:
   contents: read
