@@ -6,8 +6,9 @@ import com.intellij.openapi.roots.SyntheticLibrary;
 import com.intellij.openapi.vfs.VirtualFile;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
+import java.util.List;
 
 /**
  * Puts the bundled Jahia definitions in the project's library scope.
@@ -27,10 +28,21 @@ public final class JahiaBundledCndRootsProvider extends AdditionalLibraryRootsPr
      */
     @Override
     public @NotNull Collection<SyntheticLibrary> getAdditionalProjectLibraries(@NotNull Project project) {
-        VirtualFile root = JahiaBundledCndService.getInstance().getCndRootIfReady();
-        return root == null
-                ? Collections.emptyList()
-                : Collections.singletonList(new JahiaBundledCndLibrary(root));
+        JahiaBundledCndService service = JahiaBundledCndService.getInstance();
+
+        List<SyntheticLibrary> libraries = new ArrayList<>(2);
+
+        VirtualFile cndRoot = service.getCndRootIfReady();
+        if (cndRoot != null) {
+            libraries.add(new JahiaBundledCndLibrary(cndRoot));
+        }
+
+        VirtualFile completionClasses = service.getCompletionClassesRootIfReady();
+        if (completionClasses != null) {
+            libraries.add(new JahiaCompletionLibrary(completionClasses, service.getCompletionSourcesRootIfReady()));
+        }
+
+        return libraries;
     }
 
     // getRootsToWatch is left at its empty default: the extracted content is immutable, written

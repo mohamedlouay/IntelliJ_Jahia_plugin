@@ -7,10 +7,13 @@ import com.intellij.openapi.application.PathManager;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.extensions.PluginId;
+import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.openapi.util.io.NioFiles;
+import com.intellij.openapi.vfs.JarFileSystem;
 import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VfsUtil;
 import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.openapi.vfs.VirtualFileManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -60,7 +63,12 @@ public final class JahiaBundledCndService {
     public static final String COMPLETION_JAR = "jahia-plugin-completion-library.jar";
     public static final String COMPLETION_SOURCES_JAR = "jahia-plugin-completion-library-sources.jar";
 
+    /** Name shown under External Libraries for the JSP completion stubs. */
+    public static final String COMPLETION_LIBRARY_NAME = "Jahia completion library";
+
     private volatile VirtualFile cndRoot;
+    private volatile VirtualFile completionClassesRoot;
+    private volatile VirtualFile completionSourcesRoot;
 
     public static JahiaBundledCndService getInstance() {
         return ApplicationManager.getApplication().getService(JahiaBundledCndService.class);
@@ -78,9 +86,19 @@ public final class JahiaBundledCndService {
         return root != null && root.isValid() ? root : null;
     }
 
-    /** Folder holding the extracted completion jars. Consumed by the JSP completion library. */
-    public @NotNull Path getLibFolder() {
-        return versionFolder().resolve(LIB_SUBFOLDER);
+    /**
+     * Root of the extracted completion jar, or null while the extraction has not completed. Same
+     * non-blocking contract as {@link #getCndRootIfReady()}.
+     */
+    public @Nullable VirtualFile getCompletionClassesRootIfReady() {
+        VirtualFile root = completionClassesRoot;
+        return root != null && root.isValid() ? root : null;
+    }
+
+    /** Sources counterpart of {@link #getCompletionClassesRootIfReady()}. */
+    public @Nullable VirtualFile getCompletionSourcesRootIfReady() {
+        VirtualFile root = completionSourcesRoot;
+        return root != null && root.isValid() ? root : null;
     }
 
     /**
@@ -101,21 +119,43 @@ public final class JahiaBundledCndService {
         }
         purgeOtherVersions(versionFolder);
 
-        Path cndFolder = versionFolder.resolve(CND_SUBFOLDER);
-        VirtualFile root = LocalFileSystem.getInstance().refreshAndFindFileByNioFile(cndFolder);
-        if (root == null) {
-            throw new IOException("Extracted CND folder is not visible in the VFS: " + cndFolder);
+        VirtualFile extracted = LocalFileSystem.getInstance().refreshAndFindFileByNioFile(versionFolder);
+        if (extracted == null) {
+            throw new IOException("Extracted folder is not visible in the VFS: " + versionFolder);
         }
 
         // Synchronous and recursive on purpose. The files were just written through NIO, so the
-        // VFS knows nothing of them; publishing the root before its children are visible would
-        // hand the indexer an empty directory and silently break nodetype resolution -- the exact
+        // VFS knows nothing of them; publishing a root before its children are visible would hand
+        // the indexer an empty directory and silently break nodetype resolution -- the exact
         // failure this whole mechanism exists to prevent. Legal here because the only caller runs
         // on a background thread with no read lock held.
-        VfsUtil.markDirtyAndRefresh(false, true, true, root);
+        VfsUtil.markDirtyAndRefresh(false, true, true, extracted);
+
+        VirtualFile root = extracted.findChild(CND_SUBFOLDER);
+        if (root == null) {
+            throw new IOException("Extracted CND folder is not visible in the VFS: " + versionFolder);
+        }
+
+        Path libFolder = versionFolder.resolve(LIB_SUBFOLDER);
+        completionClassesRoot = findJarRoot(libFolder.resolve(COMPLETION_JAR));
+        completionSourcesRoot = findJarRoot(libFolder.resolve(COMPLETION_SOURCES_JAR));
 
         cndRoot = root;
-        logger.info("Bundled Jahia CND definitions ready at " + cndFolder);
+        logger.info("Bundled Jahia definitions ready at " + versionFolder);
+    }
+
+    /**
+     * Resolves the root inside a jar.
+     *
+     * <p>Built with {@link VirtualFileManager#constructUrl} rather than by concatenating
+     * {@code "jar://" + absolutePath + "!/"}, which is what the module-library code did: on Windows
+     * that produced {@code jar://C:\Users\...\x.jar!/}, with backslashes a VFS URL never accepts.
+     */
+    private static @Nullable VirtualFile findJarRoot(@NotNull Path jar) {
+        String url = VirtualFileManager.constructUrl(
+                JarFileSystem.PROTOCOL,
+                FileUtil.toSystemIndependentName(jar.toString()) + JarFileSystem.JAR_SEPARATOR);
+        return VirtualFileManager.getInstance().refreshAndFindFileByUrl(url);
     }
 
     private static void extractTo(@NotNull Path versionFolder) throws IOException {

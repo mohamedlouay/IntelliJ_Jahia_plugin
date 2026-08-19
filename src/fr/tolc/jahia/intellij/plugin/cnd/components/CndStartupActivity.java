@@ -13,7 +13,10 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
 
 /**
  * Triggers the extraction of the bundled Jahia definitions when a project opens.
@@ -47,22 +50,35 @@ public final class CndStartupActivity implements ProjectActivity {
             return Unit.INSTANCE;
         }
 
-        VirtualFile root = service.getCndRootIfReady();
-        if (root != null && !alreadyReady) {
-            // The provider was queried before the extraction finished, so it returned nothing.
-            // The roots that just appeared have to be announced, or they stay unindexed until the
-            // next project open.
-            ApplicationManager.getApplication().invokeLater(
-                    () -> ApplicationManager.getApplication().runWriteAction(
-                            () -> AdditionalLibraryRootsListener.fireAdditionalLibraryChanged(
-                                    project,
-                                    JahiaBundledCndService.LIBRARY_NAME,
-                                    Collections.emptyList(),
-                                    Collections.singletonList(root),
-                                    "jahia-bundled-cnd")),
-                    project.getDisposed());
+        if (alreadyReady) {
+            // Extraction happened for an earlier project; the provider already answers with the
+            // libraries, so this project picked them up on its own.
+            return Unit.INSTANCE;
         }
 
+        // The provider was queried before the extraction finished, so it returned nothing. The
+        // roots that just appeared have to be announced, or they stay unindexed until the next
+        // project open.
+        announce(project, JahiaBundledCndService.LIBRARY_NAME, "jahia-bundled-cnd",
+                service.getCndRootIfReady());
+        announce(project, JahiaBundledCndService.COMPLETION_LIBRARY_NAME, "jahia-completion-library",
+                service.getCompletionClassesRootIfReady(), service.getCompletionSourcesRootIfReady());
+
         return Unit.INSTANCE;
+    }
+
+    private static void announce(@NotNull Project project,
+                                 @NotNull String libraryName,
+                                 @NotNull String debugName,
+                                 VirtualFile @NotNull ... roots) {
+        List<VirtualFile> newRoots = Arrays.stream(roots).filter(Objects::nonNull).toList();
+        if (newRoots.isEmpty()) {
+            return;
+        }
+        ApplicationManager.getApplication().invokeLater(
+                () -> ApplicationManager.getApplication().runWriteAction(
+                        () -> AdditionalLibraryRootsListener.fireAdditionalLibraryChanged(
+                                project, libraryName, Collections.emptyList(), newRoots, debugName)),
+                project.getDisposed());
     }
 }
