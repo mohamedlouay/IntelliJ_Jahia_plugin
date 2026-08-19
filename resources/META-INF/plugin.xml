@@ -90,7 +90,6 @@
     <lang.braceMatcher language="Cnd" implementationClass="fr.tolc.jahia.intellij.plugin.cnd.CndBraceMatcher"/>
     <treeStructureProvider implementation="fr.tolc.jahia.intellij.plugin.cnd.treeStructure.view.ViewMergerTreeStructureProvider"/>
     <refactoring.moveHandler implementation="fr.tolc.jahia.intellij.plugin.cnd.treeStructure.view.ViewMoveProvider"/>
-    <renameHandler implementation="fr.tolc.jahia.intellij.plugin.cnd.treeStructure.view.ViewRenameHandler"/>
     <iconProvider order="first" implementation="fr.tolc.jahia.intellij.plugin.cnd.icons.CndNodeTypeFoldersIconProvider"/>
 
     <!--<localInspection language="JAVA" shortName="JavaUnknownCndNodeType" bundle="fr.tolc.jahia.intellij.plugin.cnd.CndBundle"-->
@@ -102,10 +101,6 @@
     <psi.referenceContributor language="Cnd" implementation="fr.tolc.jahia.intellij.plugin.cnd.references.ViewReferenceContributor"/>
     <!-- addResources -->
     <psi.referenceContributor language="Cnd" implementation="fr.tolc.jahia.intellij.plugin.cnd.references.ResourceReferenceContributor"/>
-
-    <!-- Tool Window -->
-<!--    <toolWindow id="Jahia" icon="/fr/tolc/jahia/intellij/plugin/cnd/icons/img/jahia_dxm.png" anchor="right" order="first"-->
-<!--                factoryClass="fr.tolc.jahia.intellij.plugin.cnd.toolWindow.JahiaToolWindowFactory"/>-->
   </extensions>
 
   <extensions defaultExtensionNs="com.intellij.properties">

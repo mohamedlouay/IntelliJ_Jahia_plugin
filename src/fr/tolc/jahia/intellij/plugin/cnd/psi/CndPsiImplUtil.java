@@ -1,6 +1,6 @@
 package fr.tolc.jahia.intellij.plugin.cnd.psi;
 
-import com.google.common.collect.Lists;
+import com.intellij.util.containers.ContainerUtil;
 import com.intellij.lang.ASTNode;
 import com.intellij.navigation.ItemPresentation;
 import com.intellij.psi.PsiElement;
@@ -212,7 +212,10 @@ public class CndPsiImplUtil {
     public static Set<CndNodeType> getParentsNodeTypes(CndNodeType element) {
         Set<CndNodeType> result = new LinkedHashSet<>();
         if (element.getSuperTypes() != null) {
-            List<CndSuperType> superTypes = Lists.reverse(element.getSuperTypes().getSuperTypeList());  //Reverse list because Jahia super types priority is from right to left
+            //Reverse list because Jahia super types priority is from right to left.
+            //ContainerUtil.reverse returns a copy where Guava's Lists.reverse returned a write-through
+            //view; the list is only read here, so the two are equivalent.
+            List<CndSuperType> superTypes = ContainerUtil.reverse(element.getSuperTypes().getSuperTypeList());
             for (CndSuperType superType : superTypes) {
                 CndNodeType nodeType = CndUtil.findNodeType(element.getProject(), superType.getNodeTypeNamespace(), superType.getNodeTypeName());
                 if (nodeType != null) {

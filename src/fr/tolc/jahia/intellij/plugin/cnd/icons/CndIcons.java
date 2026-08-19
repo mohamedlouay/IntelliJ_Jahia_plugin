@@ -20,11 +20,8 @@ public class CndIcons {
     public static final Icon TEMPLATE_INCLUDE = IconLoader.getIcon("/fr/tolc/jahia/intellij/plugin/cnd/icons/img/templateInclude.png", CndIcons.class.getClassLoader());
     public static final Icon TEMPLATE_MODULE = IconLoader.getIcon("/fr/tolc/jahia/intellij/plugin/cnd/icons/img/templateModule.png", CndIcons.class.getClassLoader());
 
-    public static final Icon JAHIA_ACTION = IconLoader.getIcon("/fr/tolc/jahia/intellij/plugin/cnd/icons/img/jahiaAction.png", CndIcons.class.getClassLoader());
-    public static final Icon JAHIA_FILTER = IconLoader.getIcon("/fr/tolc/jahia/intellij/plugin/cnd/icons/img/jahiaFilter.png", CndIcons.class.getClassLoader());
     
     public static final Icon JAHIA_LOGO_DXM = IconLoader.getIcon("/fr/tolc/jahia/intellij/plugin/cnd/icons/img/jahia_dxm.png", CndIcons.class.getClassLoader());
-    public static final Icon JAHIA_TOOL_WINDOW = IconLoader.getIcon("/fr/tolc/jahia/intellij/plugin/cnd/icons/img/jahia_toolWindow.png", CndIcons.class.getClassLoader());
 
     public static final Icon JAHIA_FOLDER_CSS = IconLoader.getIcon("/fr/tolc/jahia/intellij/plugin/cnd/icons/img/jahia_css.png", CndIcons.class.getClassLoader());
     public static final Icon JAHIA_FOLDER_JAVASCRIPT = IconLoader.getIcon("/fr/tolc/jahia/intellij/plugin/cnd/icons/img/jahia_javascript.png", CndIcons.class.getClassLoader());
