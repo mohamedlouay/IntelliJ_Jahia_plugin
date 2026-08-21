@@ -21,6 +21,13 @@ import java.util.Objects;
  * {@code org.jahia.services.content.mod.JCRNodeWrapperMod} into a PsiClass and
  * {@code CndJspElVariablesProvider} can type the implicit EL variable {@code currentNode}. Hence
  * binary roots here, where the definitions use source roots.
+ *
+ * <p>That the Java subsystem resolves at all from a SyntheticLibrary's binary roots -- rather than
+ * only from a real module library -- was the open question behind this class, and it is settled:
+ * verified in IDEA Ultimate, where completing after the dot on the EL expression
+ * {@code currentNode} inside a JSP offers the JCRNodeWrapperMod members. The fallback of
+ * registering a real module library through ModuleRootModificationUtil is therefore unnecessary
+ * and was never written; don't reintroduce it on the assumption that this cannot work.
  */
 final class JahiaCompletionLibrary extends SyntheticLibrary implements ItemPresentation {
     private final VirtualFile classesRoot;
