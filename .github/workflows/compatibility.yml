@@ -46,12 +46,15 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Cache Plugin Verifier IDEs
-        uses: actions/cache@v4
-        with:
-          path: ~/.pluginVerifier/ides
-          key: plugin-verifier-recommended-${{ runner.os }}-${{ github.run_id }}
-          restore-keys: plugin-verifier-recommended-${{ runner.os }}-
+      # No IDE cache step here on purpose. One used to sit at this spot pointing at
+      # ~/.pluginVerifier/ides, and it cached nothing at all: that path belongs to the
+      # standalone Plugin Verifier CLI, while this plugin resolves each IDE as an ordinary
+      # Gradle dependency and unpacks it under ~/.gradle/caches/*/transforms/. The step
+      # restored an empty directory every week and looked like it was working.
+      #
+      # Not repointed at the real location either: five full IDE installations run to tens
+      # of gigabytes, well past the 10 GB a repository gets. Re-downloading once a week is
+      # the honest cost of checking against five IDEs.
 
       # -PverifyRecommended swaps the single pinned IDE for ides { recommended() }:
       # the latest releases and the EAPs.

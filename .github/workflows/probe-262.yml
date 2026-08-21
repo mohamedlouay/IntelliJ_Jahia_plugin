@@ -1,16 +1,19 @@
 name: Probe 2026.2
 
-# THROWAWAY. Deleted in the commit right after the one that adds it.
+# THROWAWAY. Deleted once #17 has its answer.
 #
-# #17 asks three questions about IU-262, where com.intellij.jsp.javaee has gone
-# missing: does JspELResolveUtil still exist under another package, did
-# VariableInfoData survive, and is the ElVariablesProvider extension point
-# unchanged. Answering them needs the 2026.2 jars. Downloading that IDE locally
-# failed twice at a ten-minute timeout -- but the compatibility runner already
-# downloads it, so ask the question where the answer already is.
+# Second attempt. The first looked in ~/.pluginVerifier/ides, which is where the
+# standalone Plugin Verifier CLI keeps its IDEs -- but the IntelliJ Platform
+# Gradle Plugin 2.x does not use the CLI's downloader. It resolves each IDE as
+# an ordinary Gradle dependency (idea:ideaIU:<version>) and lets the artifact
+# transform unpack it, so the installation ends up under
+# ~/.gradle/caches/<gradle-version>/transforms/<hash>/transformed/ideaIU-*.
+# ~/.pluginVerifier/ides stays empty. Verified on the local 2025.1.1 install.
 #
-# push-triggered because workflow_dispatch shows no "Run workflow" button until
-# the file reaches the default branch, and master is untouched by this migration.
+# Reference, measured on IU-2025.1.1 where the class still exists:
+#   plugins/javaee-jsp-base-impl/lib/javaee-jsp-base-impl.jar
+#     com/intellij/jsp/javaee/web/el/impl/JspELResolveUtil.class
+#     com/intellij/jsp/javaee/web/el/impl/JspELResolveUtil$VariableInfoData.class
 
 on:
   push:
@@ -36,15 +39,8 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Cache Plugin Verifier IDEs
-        uses: actions/cache@v4
-        with:
-          path: ~/.pluginVerifier/ides
-          key: plugin-verifier-recommended-${{ runner.os }}-${{ github.run_id }}
-          restore-keys: plugin-verifier-recommended-${{ runner.os }}-
-
-      # Only here to make the verifier download the IDEs. It is expected to fail
-      # on 2026.2 -- that failure is the subject of #17.
+      # Only here to make the IDEs be downloaded. Expected to fail on 2026.2 --
+      # that failure is the subject of #17.
       - name: Download the recommended IDEs
         continue-on-error: true
         run: ./gradlew verifyPlugin -PverifyRecommended
@@ -53,56 +49,58 @@ jobs:
         if: always()
         run: |
           set -u
-          ide=$(find ~/.pluginVerifier/ides -maxdepth 1 -name 'IU-262*' -o -maxdepth 1 -name '*262.*' | head -1)
+          transforms="$HOME/.gradle/caches"
+          mapfile -t all < <(find "$transforms" -maxdepth 5 -type d -name 'ideaIU-*' 2>/dev/null | sort)
+          ide=$(printf '%s\n' "${all[@]}" | grep -- '-2026\.2' | head -1)
+
           {
-            echo "## Probe of IU-262"
+            echo "## Probe of IU-2026.2"
             echo
+            echo "IDE installations unpacked by Gradle:"
+            echo '```'
+            printf '%s\n' "${all[@]}"
+            echo '```'
+            echo
+
             if [ -z "$ide" ]; then
-              echo '_2026.2 was not downloaded. IDEs present:_'
-              echo '```'
-              ls ~/.pluginVerifier/ides 2>/dev/null || echo "(no ides directory)"
-              echo '```'
+              echo "_No 2026.2 installation among them._"
               exit 0
             fi
-            echo "IDE: \`$ide\`"
+            echo "Searching \`$ide\`"
             echo
+
+            search() {
+              find "$ide" -name '*.jar' -print0 \
+                | xargs -0 -r -n1 sh -c 'unzip -Z1 "$0" 2>/dev/null | grep -E "'"$1"'" | sed "s|^|$(basename $(dirname $(dirname $0)))/$(basename $0): |"' \
+                | sort -u | head -40
+            }
 
             echo "### Any class named *ELResolveUtil*"
             echo '```'
-            find "$ide" -name '*.jar' -print0 \
-              | xargs -0 -I{} sh -c 'unzip -Z1 "{}" 2>/dev/null | grep -i "ELResolveUtil" | sed "s|^|$(basename {}): |"' \
-              | sort -u | head -40
+            search 'ELResolveUtil'
             echo '```'
             echo
 
             echo "### Any class named *VariableInfoData*"
             echo '```'
-            find "$ide" -name '*.jar' -print0 \
-              | xargs -0 -I{} sh -c 'unzip -Z1 "{}" 2>/dev/null | grep -i "VariableInfoData" | sed "s|^|$(basename {}): |"' \
-              | sort -u | head -40
+            search 'VariableInfoData'
             echo '```'
             echo
 
-            echo "### Does the package com/intellij/jsp/javaee exist at all"
+            echo "### The package com/intellij/jsp/javaee, in full"
             echo '```'
-            find "$ide" -name '*.jar' -print0 \
-              | xargs -0 -I{} sh -c 'unzip -Z1 "{}" 2>/dev/null | grep "^com/intellij/jsp/javaee/" | sed "s|^|$(basename {}): |"' \
-              | sort -u | head -30
+            search '^com/intellij/jsp/javaee/'
             echo '```'
             echo
 
-            echo "### ElVariablesProvider and the extension point"
+            echo "### ElVariablesProvider and ELImplicitVariable (the public API we rely on)"
             echo '```'
-            find "$ide" -name '*.jar' -print0 \
-              | xargs -0 -I{} sh -c 'unzip -Z1 "{}" 2>/dev/null | grep -E "javaee/el/providers/ElVariablesProvider|el/util/ELImplicitVariable" | sed "s|^|$(basename {}): |"' \
-              | sort -u | head -20
+            search 'javaee/el/providers/ElVariablesProvider|javaee/el/util/ELImplicitVariable'
             echo '```'
             echo
 
-            echo "### implicitVariablesProvider declarations in plugin.xml files"
+            echo "### Is the javaee-jsp-base-impl plugin still there at all"
             echo '```'
-            find "$ide" -name '*.jar' -print0 \
-              | xargs -0 -I{} sh -c 'unzip -p "{}" META-INF/plugin.xml 2>/dev/null | grep -o "implicitVariablesProvider[^>]*" | sed "s|^|$(basename {}): |"' \
-              | sort -u | head -20
+            ls -d "$ide"/plugins/*jsp* "$ide"/plugins/*javaee* 2>/dev/null || echo "(no jsp or javaee plugin directory)"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
