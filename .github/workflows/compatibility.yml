@@ -13,6 +13,11 @@ name: Compatibility
 #
 # Running the verifier weekly against the latest releases and EAPs is the mitigation: it surfaces
 # a rename while it is still an EAP, rather than when a user updates their IDE.
+#
+# It already has. First run, 2026-08-19, against IU-251 / IU-252 / IU-253 / IU-261 / IU-262:
+# compatible everywhere except IU-262.9437.185, where the whole package com.intellij.jsp.javaee is
+# gone and JspELResolveUtil with it. The other two internal APIs still resolve on all five. That is
+# exactly the failure mode this job exists for -- 2026.2 is an EAP, so there is time.
 
 on:
   schedule:
@@ -20,11 +25,6 @@ on:
     # cron at :00, and GitHub drops runs it cannot schedule.
     - cron: '17 5 * * 1'
   workflow_dispatch:
-  # TEMPORARY again, and removed in the following commit. workflow_dispatch has no "Run workflow"
-  # button until this file reaches master, and the summary step below has to be exercised once to
-  # be trusted.
-  push:
-    branches: [feat/gradle-build-2025]
 
 permissions:
   contents: read
