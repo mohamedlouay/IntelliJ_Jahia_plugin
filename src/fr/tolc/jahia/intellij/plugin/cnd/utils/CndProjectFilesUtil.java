@@ -593,11 +593,35 @@ public class CndProjectFilesUtil {
             return new HashMap<>();
         }
         File resourcesFolder = new File(jahiaWorkFolderPath + "/" + resourcesType.name());
-
-        // System-independent, with a "/" separator: the prefix is stripped from paths below, and a
-        // hard-coded "\\" matched nothing on Linux and macOS, silently returning no resource at all.
         return getFilesRecursive(module.getProject(), resourcesFolder,
-                FileUtil.toSystemIndependentName(resourcesFolder.getAbsolutePath()) + "/");
+                rootPrefix(resourcesFolder.getAbsolutePath()));
+    }
+
+    /**
+     * The prefix stripped from every resource path to produce its map key.
+     *
+     * <p>System-independent, with a {@code "/"} separator. The previous version appended a
+     * hard-coded {@code "\\"}, which matches nothing once {@link FileUtil#toSystemIndependentName}
+     * has already turned the path's separators into {@code "/"} -- so on Linux and macOS every key
+     * came back null and {@link #getResources} returned an empty map, silently. Nobody noticed
+     * because the plugin was only ever built and run on Windows.
+     *
+     * <p>Package-private and separate from the walk purely so it can be tested without a project.
+     */
+    @NotNull
+    static String rootPrefix(@NotNull String absoluteFolderPath) {
+        return FileUtil.toSystemIndependentName(absoluteFolderPath) + "/";
+    }
+
+    /**
+     * The map key for one resource: its path relative to {@code relativeToFolder}, or null when the
+     * file lies outside that folder.
+     */
+    @Nullable
+    static String relativeKey(@NotNull String absoluteFilePath, @NotNull String relativeToFolder) {
+        // StringUtil.substringAfter returns null when the separator is absent, where commons-lang
+        // returned "". Callers must guard against the NPE that would otherwise follow.
+        return StringUtil.substringAfter(FileUtil.toSystemIndependentName(absoluteFilePath), relativeToFolder);
     }
 
     @NotNull
@@ -613,10 +637,7 @@ public class CndProjectFilesUtil {
                     }
                 }
             } else {
-                // StringUtil.substringAfter returns null when the separator is absent,
-                // where commons-lang returned "". Guard against the NPE that would follow.
-                String path = FileUtil.toSystemIndependentName(file.getAbsolutePath());
-                String relativePath = StringUtil.substringAfter(path, relativeToFolder);
+                String relativePath = relativeKey(file.getAbsolutePath(), relativeToFolder);
                 if (relativePath != null) {
                     res.put(relativePath, getPsiFileFromIoFile(project, file));
                 }
