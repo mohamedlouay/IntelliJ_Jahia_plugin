@@ -5,6 +5,7 @@ import org.jetbrains.intellij.platform.gradle.tasks.VerifyPluginTask
 plugins {
     id("java")
     id("org.jetbrains.intellij.platform") version "2.18.1"
+    id("org.jetbrains.intellij.platform.grammarkit") version "2.18.1"
 }
 
 group = providers.gradleProperty("pluginGroup").get()
@@ -44,6 +45,45 @@ tasks.withType<JavaCompile>().configureEach {
 }
 
 // ---------------------------------------------------------------------------
+// Lexer, generated at build time from Cnd.flex.
+//
+// CndLexer.java used to be generated from the IDE and committed: 61 KB of JFlex
+// output sitting in src/, which made every lexer change conditional on somebody
+// having JFlex wired into their IDE, and gave no guarantee that the committed
+// file still matched the .flex beside it.
+//
+// The generator moved from JFlex 1.7.0 to 1.10.17, which rewrites the character
+// class tables completely -- roughly 1900 lines of diff. The token stream is
+// unchanged: the six lexer baselines and the sixteen parsing baselines from the
+// golden tests all pass without a single re-record. That check is the only
+// reason this was safe to do, and it is why it could not be done before those
+// tests existed.
+//
+// The parser is NOT generated here, and gen/ stays committed. Not an oversight:
+// Cnd.bnf declares psiImplUtilClass=CndPsiImplUtil, and Grammar-Kit resolves
+// that class by reflection over its classpath. Standalone it has no compiled
+// CndPsiImplUtil to look at, so it silently drops all 66 delegating methods --
+// and CndPsiImplUtil cannot be compiled first, because its own bodies call
+// those very methods on the generated interfaces. The cycle is real, and
+// breaking it means moving the implementations into the hand-written mixin
+// classes, which is a refactor of behaviour, not of the build. Tracked in #19.
+// ---------------------------------------------------------------------------
+val generatedLexerDir: Provider<Directory> = layout.buildDirectory.dir("generated/lexer")
+
+tasks.generateLexer {
+    sourceFile = layout.projectDirectory.file("src/fr/tolc/jahia/intellij/plugin/cnd/Cnd.flex")
+    targetRootOutputDir = generatedLexerDir
+    packageName = "fr.tolc.jahia.intellij.plugin.cnd"
+    // Required for purgeOldFiles: without it the task cannot tell which file it owns.
+    pathToClass = "fr/tolc/jahia/intellij/plugin/cnd/CndLexer.java"
+    purgeOldFiles = true
+}
+
+tasks.compileJava {
+    dependsOn(tasks.generateLexer)
+}
+
+// ---------------------------------------------------------------------------
 // Layout mapping: this project predates the Maven convention. Nothing moves.
 //
 //   src/  -> Java source root AND resource root (39 icon PNGs live inside the
@@ -61,7 +101,7 @@ tasks.withType<JavaCompile>().configureEach {
 // ---------------------------------------------------------------------------
 sourceSets {
     main {
-        java.setSrcDirs(listOf("src", "gen"))
+        java.setSrcDirs(listOf("src", "gen", generatedLexerDir))
         resources.setSrcDirs(listOf("resources", "src"))
         resources.exclude(
             "**/*.java",
@@ -167,3 +207,4 @@ intellijPlatform {
 tasks.test {
     useJUnit()
 }
+
