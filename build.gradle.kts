@@ -147,6 +147,69 @@ tasks.processResources {
     from(generateCndIndex) { into("jahia") }
 }
 
+// ---------------------------------------------------------------------------
+// changeNotes, taken from CHANGELOG.md rather than maintained twice.
+//
+// Deliberately hand-rolled instead of adding org.jetbrains.changelog: the
+// history in this file predates Keep a Changelog and does not follow it, and a
+// plugin that wants to own the whole file would either reformat that history or
+// refuse it. This only needs to read one section, and it fails the build if
+// that section is missing -- which is the failure worth having, since a release
+// whose notes silently came out empty is the thing to avoid.
+// ---------------------------------------------------------------------------
+fun renderChangeNotes(changelog: File, version: String): String {
+    val lines = changelog.readLines()
+    val start = lines.indexOfFirst { it.startsWith("## [$version]") }
+    require(start >= 0) { "No '## [$version]' section in ${changelog.name}" }
+    val rest = lines.drop(start + 1)
+    val end = rest.indexOfFirst { it.startsWith("## [") }
+    val body = if (end >= 0) rest.take(end) else rest
+
+    fun inline(text: String) = text
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace(Regex("""\*\*(.+?)\*\*""")) { "<b>" + it.groupValues[1] + "</b>" }
+        .replace(Regex("""`(.+?)`""")) { "<code>" + it.groupValues[1] + "</code>" }
+
+    val html = StringBuilder()
+    val bullets = mutableListOf<String>()
+    val paragraph = mutableListOf<String>()
+
+    fun flushBullets() {
+        if (bullets.isEmpty()) return
+        html.append("<ul>")
+        bullets.forEach { html.append("<li>").append(inline(it)).append("</li>") }
+        html.append("</ul>")
+        bullets.clear()
+    }
+
+    fun flushParagraph() {
+        if (paragraph.isEmpty()) return
+        html.append("<p>").append(inline(paragraph.joinToString(" "))).append("</p>")
+        paragraph.clear()
+    }
+
+    body.map { it.trimEnd() }.forEach { line ->
+        when {
+            line.isBlank() -> { flushBullets(); flushParagraph() }
+            line.startsWith("### ") -> {
+                flushBullets(); flushParagraph()
+                html.append("<h4>").append(inline(line.removePrefix("### "))).append("</h4>")
+            }
+            line.startsWith("- ") -> { flushParagraph(); bullets.add(line.removePrefix("- ")) }
+            // A wrapped bullet: continuation lines are indented under their dash.
+            line.startsWith("  ") && bullets.isNotEmpty() -> bullets[bullets.lastIndex] += " " + line.trim()
+            else -> { flushBullets(); paragraph.add(line.trim()) }
+        }
+    }
+    flushBullets()
+    flushParagraph()
+
+    require(html.isNotEmpty()) { "The '## [$version]' section of ${changelog.name} is empty" }
+    return html.toString()
+}
+
 intellijPlatform {
     instrumentCode = true // GUI Designer .form binding + @NotNull assertions
     buildSearchableOptions = false // the plugin contributes no settings UI
@@ -156,6 +219,9 @@ intellijPlatform {
         description = providers.fileContents(
             layout.projectDirectory.file("plugin-description.html"),
         ).asText
+        changeNotes = providers.gradleProperty("pluginVersion").map {
+            renderChangeNotes(layout.projectDirectory.file("CHANGELOG.md").asFile, it)
+        }
         ideaVersion {
             sinceBuild = providers.gradleProperty("pluginSinceBuild")
 

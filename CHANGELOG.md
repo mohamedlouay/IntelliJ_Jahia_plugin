@@ -4,8 +4,87 @@ All notable changes to this plugin.
 
 ## [Unreleased]
 
+## [3.0.0]
+
+Revival release. The plugin had not been touched since February 2023 and no
+longer loaded on a current IDE: the platform had removed `WriteCommandAction.Simple`,
+dropped commons-lang 2 from the classpath and made `RegisterToolWindowTask` internal,
+and nothing had ever reported it. Everything below follows from bringing it back
+(#1).
+
+### Requirements
+
+- (**IMPORTANT**) Requires **IntelliJ IDEA 2025.1 or later**. There is no upper
+  bound, so the plugin stays installable on newer IDEs rather than being
+  disabled by an update.
+- (**IMPORTANT**) The bundled **Properties** plugin is now a required
+  dependency. It was effectively required before as well -- non-optional code
+  linked against it -- but declaring it optional produced a
+  `NoClassDefFoundError` instead of an honest "missing dependency" message.
+- IntelliJ IDEA **Ultimate** remains necessary for the JSP and EL features
+  (completion, references, annotations inside JSP). They degrade quietly in
+  Community, as before.
+
+### Fixed
+
+- (**IMPORTANT FIX**) The custom gutter icon -- a PNG dropped in `icons/` and
+  named after a node type -- **had never worked on Windows** since it was
+  announced in 2.0.0. The path was passed as `"file:/" + path`, which does not
+  form a valid URL for a Windows path.
+- (**IMPORTANT FIX**) On Linux and macOS, views and templates were **never
+  found**: the resource lookup appended a hard-coded `\` to a path whose
+  separators had already been normalised to `/`, so every lookup came back
+  empty. No error, no log line.
+- Files created by "New -> CND File" and "Create new view" now appear
+  **immediately**, with the caret placed. They used to be written behind the
+  IDE's back and stayed invisible until the next refresh.
+- Renaming a module's Jahia work folder is picked up **without restarting the
+  IDE**. The path was cached in a static map keyed by project, which also leaked
+  every project ever opened.
+- Opening a `.cnd` file no longer triggers `Slow operations are prohibited` on
+  the UI thread.
+
 ### Changed
-- Migration to IntelliJ IDEA 2025.1+ (see issue #1)
+
+- The bundled node type definitions (44 `.cnd` files) and the JSP completion
+  jars are now served as **libraries the IDE owns**, instead of being written
+  into the plugin installation folder and attached to each module as a library.
+  Consequences: your `.iml` and `workspace.xml` are **no longer modified**, no
+  `jahia-plugin-cnds.jar` is written anywhere, and opening a non-Jahia project
+  costs nothing.
+- The plugin now installs correctly as a **single jar**. Templates are read from
+  the jar rather than resolved as paths inside an exploded installation
+  directory.
+
+### Removed
+
+- (**IMPORTANT**) The **"Jahia" tool window is gone**. It duplicated the Project
+  view, its content was never refreshed after the first build, and the platform
+  API it was built on became internal. Node type navigation is unaffected:
+  Ctrl+click, Find Usages, the structure view and the gutter markers all work as
+  before.
+- The "Rename" handler on views has been removed, so **Shift+F6 on a view now
+  uses the IDE's own rename**, which actually renames the file. The custom
+  handler had become a no-op.
+
+### Known issue
+
+- On **2026.2 EAP**, JSP EL completion for the Jahia implicit variables
+  (`currentNode`, `renderContext`, `url`, ...) does not work: the platform
+  package `com.intellij.jsp.javaee` was removed. No released IDE is affected --
+  2025.1, 2025.2, 2025.3 and 2026.1 are all verified compatible. Tracked in #17.
+
+### Internal
+
+- Build rebuilt on Gradle 9 with the IntelliJ Platform Gradle Plugin 2.x; the
+  plugin compiles from a fresh clone again.
+- 33 golden tests over the CND grammar: the full PSI tree of 16 real definition
+  files, the token stream of 6 lexer states, and the resource path handling.
+- Two GitHub Actions workflows: one per push, and a weekly run of the Plugin
+  Verifier against the latest releases and EAPs -- the thing whose absence let
+  this plugin die quietly the first time.
+- The lexer is generated from `Cnd.flex` at build time instead of being
+  committed.
 
 ## [2.2.0]
 
