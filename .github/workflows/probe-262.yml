@@ -39,11 +39,35 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      # Which IDEs recommended() actually selects today. Cheap, and it pins down
+      # whether a missing installation below means "not selected" or "selection
+      # succeeded but the run stopped before getting there".
+      - name: What recommended() selects
+        run: |
+          {
+            echo "## recommended() resolves to"
+            echo '```'
+            ./gradlew printProductsReleases -PverifyRecommended --console=plain 2>&1 | grep '^IU-'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       # Only here to make the IDEs be downloaded. Expected to fail on 2026.2 --
-      # that failure is the subject of #17.
+      # that failure is the subject of #17. The output is kept because the first
+      # run of this probe unpacked only three of the five selected IDEs, which
+      # means the task stops early for a reason nothing has printed yet.
       - name: Download the recommended IDEs
         continue-on-error: true
-        run: ./gradlew verifyPlugin -PverifyRecommended
+        run: ./gradlew verifyPlugin -PverifyRecommended --console=plain 2>&1 | tee verify.log
+
+      - name: Why it stopped
+        if: always()
+        run: |
+          {
+            echo "## Tail of the verifyPlugin run"
+            echo '```'
+            tail -120 verify.log 2>/dev/null || echo "(no verify.log)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Search the 2026.2 jars
         if: always()
